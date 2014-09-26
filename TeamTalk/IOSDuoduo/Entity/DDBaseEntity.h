@@ -1,0 +1,13 @@
+//
+//  DDBaseEntity.h
+//  IOSDuoduo
+//
+//  Created by Michael Scofield on 2014-08-16.
+//  Copyright (c) 2014 dujia. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface DDBaseEntity : NSObject
+@property(assign)NSInteger lastUpdateTime;
+@end
