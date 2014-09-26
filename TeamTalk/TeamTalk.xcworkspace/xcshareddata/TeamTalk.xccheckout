@@ -5,36 +5,36 @@
 	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
 	<false/>
 	<key>IDESourceControlProjectIdentifier</key>
-	<string>90853E14-483B-41AF-8D43-AA5B304954A5</string>
+	<string>CEE2AE45-3C6F-486B-B48B-8154854EA4D8</string>
 	<key>IDESourceControlProjectName</key>
 	<string>TeamTalk</string>
 	<key>IDESourceControlProjectOriginsDictionary</key>
 	<dict>
-		<key>E930D7A5-3129-40AD-8A49-BFE7DC296604</key>
-		<string>https://github.com/mgjdongxie/TTiOSClient.git</string>
+		<key>36474B52-9BFD-4A18-B124-4EEB7180A4C0</key>
+		<string>https://github.com/mogutt/TTiOSClient.git</string>
 	</dict>
 	<key>IDESourceControlProjectPath</key>
 	<string>TeamTalk/TeamTalk.xcworkspace</string>
 	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
 	<dict>
-		<key>E930D7A5-3129-40AD-8A49-BFE7DC296604</key>
+		<key>36474B52-9BFD-4A18-B124-4EEB7180A4C0</key>
 		<string>../..</string>
 	</dict>
 	<key>IDESourceControlProjectURL</key>
-	<string>https://github.com/mgjdongxie/TTiOSClient.git</string>
+	<string>https://github.com/mogutt/TTiOSClient.git</string>
 	<key>IDESourceControlProjectVersion</key>
 	<integer>110</integer>
 	<key>IDESourceControlProjectWCCIdentifier</key>
-	<string>E930D7A5-3129-40AD-8A49-BFE7DC296604</string>
+	<string>36474B52-9BFD-4A18-B124-4EEB7180A4C0</string>
 	<key>IDESourceControlProjectWCConfigurations</key>
 	<array>
 		<dict>
 			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
 			<string>public.vcs.git</string>
 			<key>IDESourceControlWCCIdentifierKey</key>
-			<string>E930D7A5-3129-40AD-8A49-BFE7DC296604</string>
+			<string>36474B52-9BFD-4A18-B124-4EEB7180A4C0</string>
 			<key>IDESourceControlWCCName</key>
-			<string>TTiOSClient</string>
+			<string>ttopen</string>
 		</dict>
 	</array>
 </dict>

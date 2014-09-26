@@ -45,7 +45,7 @@ static int max_try_upload_times = 5;
 {
     
     NSBlockOperation *operation = [NSBlockOperation blockOperationWithBlock:^(){
-        NSURL *url = [NSURL URLWithString:@"http://101.68.218.125:8001"];
+        NSURL *url = [NSURL URLWithString:@""];
         NSString *urlString =  [url.absoluteString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
         @autoreleasepool
         {
