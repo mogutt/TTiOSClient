@@ -31,8 +31,8 @@
 #define IM_PDU_HEADER_LEN   12
 #define IM_PDU_VERSION      1
 
-
-
+#define SERVER_IP @""
+#define SERVER_PORT 0
 
 
 //-------------------本地化--------------------

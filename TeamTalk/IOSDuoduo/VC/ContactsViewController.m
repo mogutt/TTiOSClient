@@ -303,7 +303,7 @@
     self.tools = [[ContactAvatarTools alloc] initWithFrame:CGRectMake(rect.origin.x+btn.frame.size.width+5, rect.origin.y-70, 100, 100)];
     __weak ContactsViewController *weakSelf = self;
     if ([user isKindOfClass:[DDUserEntity class]]) {
-        self.tools.block=^(NSInteger index){
+        self.tools.block=^(int index){
             switch (index) {
                 case 1:
                     [weakSelf callNum:(DDUserEntity *)user];

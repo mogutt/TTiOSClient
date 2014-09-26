@@ -129,7 +129,7 @@
         NSString *clientVersion = @"1.1";
         NSInteger status = [array[2] intValue];
         NSInteger clientType = [array[3] intValue];
-        uint32_t totalLen = strLen(userID)+strLen(password)+strLen(clientVersion)+sizeof(status)+sizeof(clientType)+IM_PDU_HEADER_LEN + 4 * 3;
+        uint32_t totalLen = strLen(userID)+strLen(password)+strLen(clientVersion)+sizeof(status)+sizeof(clientType)+IM_PDU_HEADER_LEN + 4;
         [dataout writeInt:totalLen];
         [dataout writeTcpProtocolHeader:DDSERVICE_LOGIN
                                     cId:DDCMD_LOGIN_REQ_USERLOGIN

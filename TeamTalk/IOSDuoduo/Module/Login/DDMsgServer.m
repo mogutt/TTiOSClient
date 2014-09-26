@@ -10,6 +10,7 @@
 //#import "LoginEntity.h"
 #import "DDTcpClientManager.h"
 #import "DDLoginAPI.h"
+#import "MD5.h"
 //#import "LoginEntity.h"
 static int const timeOutTimeInterval = 10;
 
@@ -49,7 +50,8 @@ typedef void(^Success)(id object);
     {
         
         NSNumber* clientType = @(17);
-        NSArray* parameter = @[userID,password,[NSNumber numberWithInteger:1],clientType];
+        
+        NSArray* parameter = @[userID,[MD5 getMD5:password],[NSNumber numberWithInteger:1],clientType];
         
         DDLoginAPI* api = [[DDLoginAPI alloc] init];
         [api requestWithObject:parameter Completion:^(id response, NSError *error) {
