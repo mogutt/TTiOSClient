@@ -31,7 +31,7 @@
 
 - (int)requestCommendID
 {
-    return 1;
+    return DDCMD_FRI_RECENT_CONTACTS_REQ;
 }
 
 - (int)responseCommendID
@@ -78,9 +78,9 @@
     Package package = (id)^(id object,uint32_t seqNo)
     {
         DDDataOutputStream *dataout = [[DDDataOutputStream alloc] init];
-        uint32_t totalLen = 20;
+        uint32_t totalLen = IM_PDU_HEADER_LEN + 4;
         [dataout writeInt:totalLen];
-        [dataout writeTcpProtocolHeader:DDSERVICE_FRI cId:1 seqNo:seqNo];
+        [dataout writeTcpProtocolHeader:DDSERVICE_FRI cId:DDCMD_FRI_RECENT_CONTACTS_REQ seqNo:seqNo];
         [dataout writeInt:0];
         return [dataout toByteArray];
     };

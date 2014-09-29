@@ -49,9 +49,9 @@ enum
 //MODULE_ID_FRIENDLIST = 3 成员列表相关
 enum
 {
+    DDCMD_FRI_RECENT_CONTACTS_REQ     = 1,                //请求最近联系人
     DDCMD_FRI_SERVICE_LIST            = 2,                //店铺客服列表
     DDCMD_FRI_RECENT_CONTACTS_RES     = 3,                //最近联系人列表
-    DDCMD_FRI_RECENT_CONTACTS_REQ     = 12,               //移除会话请求
     DDCMD_FRI_USERLIST_ONLINE_STATE   = 4,                //在线好友状态列表
     DDCMD_FRI_USER_STATE_CHANGE       = 5,                //好友状态更新通知
     DDCMD_FRI_USER_SERVICE_REQ        = 6,                //请求一个客服
