@@ -2486,7 +2486,7 @@
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "IOSDuoduo/IOSDuoduo-Prefix.pch";
+				GCC_PREFIX_HEADER = "IOSDuoduo/TeamTalk-Prefix.pch";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -2508,7 +2508,7 @@
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "IOSDuoduo/IOSDuoduo-Prefix.pch";
+				GCC_PREFIX_HEADER = "IOSDuoduo/TeamTalk-Prefix.pch";
 				INFOPLIST_FILE = "IOSDuoduoTests/TeamTalkTests-Info.plist";
 				PRODUCT_NAME = TeamTalkTests;
 				TEST_HOST = "$(BUNDLE_LOADER)";
