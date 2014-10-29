@@ -31,6 +31,7 @@
 #define IM_PDU_HEADER_LEN   12
 #define IM_PDU_VERSION      1
 
+#warning please set SERVER_IP&SERVER_PORT here
 #define SERVER_IP @""
 #define SERVER_PORT 0
 
