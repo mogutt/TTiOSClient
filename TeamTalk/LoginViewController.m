@@ -54,6 +54,11 @@
     [self.userPassTextField.layer setBorderColor:RGB(211, 211, 211).CGColor];
     [self.userPassTextField.layer setBorderWidth:0.5];
     [self.userPassTextField.layer setCornerRadius:3];
+    
+    UITapGestureRecognizer * tapGestuer =
+    [[UITapGestureRecognizer alloc] initWithTarget:self
+                                            action:@selector(hiddenKeyboard:)];
+    [self.view addGestureRecognizer:tapGestuer];
 }
 
 - (void)didReceiveMemoryWarning
@@ -61,10 +66,9 @@
     [super didReceiveMemoryWarning];
     // Dispose of any resources that can be recreated.
 }
--(IBAction)hiddenKeyboard:(id)sender
+-(void)hiddenKeyboard:(UITapGestureRecognizer*)gesture
 {
-    [_userNameTextField resignFirstResponder];
-     [_userPassTextField resignFirstResponder];
+    [self.view endEditing:YES];
 }
 
 - (IBAction)login:(UIButton*)button
