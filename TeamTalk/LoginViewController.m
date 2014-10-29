@@ -66,10 +66,9 @@
     [super didReceiveMemoryWarning];
     // Dispose of any resources that can be recreated.
 }
--(IBAction)hiddenKeyboard:(id)sender
+-(void)hiddenKeyboard:(UITapGestureRecognizer*)gesture
 {
-    [_userNameTextField resignFirstResponder];
-     [_userPassTextField resignFirstResponder];
+    [self.view endEditing:YES];
 }
 
 - (IBAction)login:(UIButton*)button
