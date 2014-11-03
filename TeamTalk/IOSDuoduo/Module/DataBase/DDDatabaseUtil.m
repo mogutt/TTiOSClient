@@ -293,7 +293,7 @@
     });
 }
 
-- (void)getLastestMessageForSessionID:(NSString*)sessionID completion:(DDDBGetLastestMessageCompletion)completion
+- (void)getLatestMessageForSessionID:(NSString*)sessionID completion:(DDDBGetLastestMessageCompletion)completion
 {
     dispatch_async(self.databaseMessageQueue, ^{
         if ([_database tableExists:TABLE_MESSAGE])

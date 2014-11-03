@@ -87,7 +87,7 @@
         return;
     }
     //没有未读消息，读数据库
-    [[DDDatabaseUtil instance] getLastestMessageForSessionID:sessionID completion:^(DDMessageEntity *message, NSError *error) {
+    [[DDDatabaseUtil instance] getLatestMessageForSessionID:sessionID completion:^(DDMessageEntity *message, NSError *error) {
         completion(message);
     }];
 }
