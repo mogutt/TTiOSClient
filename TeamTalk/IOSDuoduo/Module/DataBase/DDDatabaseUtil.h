@@ -61,7 +61,7 @@ typedef void(^DDGetLastestCommodityMessageCompletion)(DDMessageEntity* message);
  *  @param sessionID  sessionID
  *  @param completion 完成获取最新的消息
  */
-- (void)getLastestMessageForSessionID:(NSString*)sessionID completion:(DDDBGetLastestMessageCompletion)completion;
+- (void)getLatestMessageForSessionID:(NSString*)sessionID completion:(DDDBGetLastestMessageCompletion)completion;
 
 /**
  *  在|databaseMessageQueue|执行查询操作，分页获取聊天记录
