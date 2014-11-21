@@ -9,6 +9,7 @@
 #import "PhotosCache.h"
 #import "SDImageCache.h"
 #import "std.h"
+#import "NSString+Additions.h"
 #import <CommonCrypto/CommonDigest.h>
 #import "DDSundriesCenter.h"
 
@@ -76,6 +77,7 @@
     if (self) {
         _ioQueue = dispatch_queue_create("com.mogujie.DDPhotosCache", DISPATCH_QUEUE_SERIAL);
         _memCache = [NSCache new];
+        
         dispatch_sync(_ioQueue, ^{
             _fileManager = [NSFileManager new];
         });

@@ -12,6 +12,7 @@
     @property(strong)IBOutlet UIView *profileView;
 @property(weak)IBOutlet UILabel *nickName;
 @property(weak)IBOutlet UILabel *realName;
+@property(weak)IBOutlet UIImageView *avatar;
 @property(weak)IBOutlet UIView *view1;
 @property(weak)IBOutlet UIView *view2;
 -(IBAction)goPersonalProfile;

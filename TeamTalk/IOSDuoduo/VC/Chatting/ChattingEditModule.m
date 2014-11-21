@@ -32,21 +32,7 @@
  *
  *  @param userID 要添加的用户的id
  */
--(void)addNewPersonToGroup:(NSArray *)userIDs Block:(void(^)(BOOL success))block
-{
-    DDCreateGroupAPI* createGroupAPI = [[DDCreateGroupAPI alloc] init];
-    NSArray* object = @[@"aaa",@"",self.group];
-    
-    [createGroupAPI requestWithObject:object Completion:^(id response, NSError *error) {
-        if (response && !error)
-        {
-            block(YES);
-        }else
-        {
-            block(NO);
-        }
-    }];
-}
+
 /**
  *  从当前的Group中删除一个人
  *

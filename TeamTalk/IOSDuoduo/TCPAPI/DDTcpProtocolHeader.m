@@ -1,8 +1,10 @@
-/************************************************************
- * @file         TcpProtocolHeader.h
- * @author       快刀<kuaidao@mogujie.com>
- * summery       tcp服务器协议头，包括每个service下的command Id定义
- ************************************************************/
+//
+//  DDTcpProtocolHeader.m
+//
+//
+//  Created by Michael Scofield on 2014-07-15.
+//  Copyright (c) 2014 dujia. All rights reserved.
+//
 
 #import "DDTcpProtocolHeader.h"
 

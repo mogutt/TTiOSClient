@@ -12,7 +12,6 @@
 #define DD_USER_INFO_SHOP_ID_KEY                    @"shopID"
 
 @interface DDUserEntity : DDBaseEntity
-@property(nonatomic,strong) NSString *userId;       //用户ID
 @property(nonatomic,strong) NSString *name;         //用户名
 @property(nonatomic,strong) NSString *nick;         //用户昵称
 @property(nonatomic,strong) NSString *avatar;       //用户头像
@@ -26,6 +25,7 @@
 @property(strong)NSString *email;
 @property(strong)NSString *token;
 @property(strong)NSString *title;
+@property(strong)NSString *pyname;
 @property(nonatomic,assign) NSInteger userRole;        //用户角色
 @property(nonatomic,retain) NSMutableDictionary* info; //用户附属信息
 - (id)initWithUserID:(NSString*)userID name:(NSString*)name nick:(NSString*)nick avatar:(NSString*)avatar userRole:(NSInteger)userRole userUpdated:(NSUInteger)updated;

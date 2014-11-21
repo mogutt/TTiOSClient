@@ -8,7 +8,13 @@
 
 #import <Foundation/Foundation.h>
 @class ChattingModule;
+@class DDDataInputStream;
 typedef NS_ENUM(NSUInteger, DDMessageType)
+{
+    MESSAGE_TYPE_SINGLE =1,                 //单个人会话消息
+    MESSAGE_TYPE_TEMP_GROUP  =2,                     //临时群消息.
+};
+typedef NS_ENUM(NSUInteger, DDMessageContentType)
 {
     DDMessageTypeText = 1,
     DDMessageTypeVoice,
@@ -19,9 +25,9 @@ typedef NS_ENUM(NSUInteger, DDMessageType)
 
 typedef NS_ENUM(NSUInteger, DDMessageState)
 {
-    DDMessageSending,
-    DDMessageSendFailure,
-    DDmessageSendSuccess
+    DDMessageSending =0,
+    DDMessageSendFailure =1,
+    DDmessageSendSuccess =2
 };
 
 //图片
@@ -46,16 +52,23 @@ typedef NS_ENUM(NSUInteger, DDMessageState)
 #define DD_COMMODITY_ID                     @"CommodityID"
 
 @interface DDMessageEntity : NSObject
-@property(nonatomic,assign) NSUInteger msgID;           //MessageID
+@property(strong) NSString * msgID;           //MessageID
 @property(nonatomic,assign) DDMessageType msgType;              //消息类型
 @property(nonatomic,assign) NSUInteger msgTime;             //消息收发时间
 @property(nonatomic,strong) NSString* sessionId;        //会话id，
+@property(assign)NSUInteger seqNo;
 @property(nonatomic,strong) NSString* senderId;         //发送者的Id,群聊天表示发送者id
 @property(nonatomic,strong) NSString* msgContent;       //消息内容,若为非文本消息则是json
 @property(nonatomic,strong) NSString* toUserID;     //发消息的用户ID
 @property(nonatomic,strong) NSMutableDictionary* info;     //一些附属的属性，包括语音时长
+@property(assign)DDMessageContentType msgContentType;
+@property(nonatomic,strong) NSString* attach;
 //@property(nonatomic,assign) BOOL isSend;
 @property(nonatomic,assign) DDMessageState state;       //消息发送状态
-- (DDMessageEntity*)initWithMsgID:(NSUInteger)ID msgType:(DDMessageType)msgType msgTime:(NSUInteger)msgTime sessionID:(NSString*)sessionID senderID:(NSString*)senderID msgContent:(NSString*)msgContent toUserID:(NSString*)toUserID;
-+(DDMessageEntity *)makeMessage:(NSString *)content Module:(ChattingModule *)module MsgType:(DDMessageType )type;
+- (DDMessageEntity*)initWithMsgID:(NSString *)ID msgType:(DDMessageType)msgType msgTime:(NSUInteger)msgTime sessionID:(NSString*)sessionID senderID:(NSString*)senderID msgContent:(NSString*)msgContent toUserID:(NSString*)toUserID;
++(DDMessageEntity *)makeMessage:(NSString *)content Module:(ChattingModule *)module MsgType:(DDMessageContentType )type;
++(DDMessageEntity *)makeMessageFromStream:(DDDataInputStream *)bodyData;
+-(BOOL)isGroupMessage;
+-(BOOL)isImageMessage;
+-(BOOL)isSendBySelf;
 @end

@@ -15,7 +15,7 @@
     self = [super init];
     if (self)
     {
-        _userId = [userID copy];
+        self.objID = [userID copy];
         _name = [name copy];
         _nick = [nick copy];
         _avatar = [avatar copy];
@@ -26,10 +26,19 @@
     return self;
 }
 
+- (NSString*)avatar
+{
+    if (![_avatar hasSuffix:@"_100x100"])
+    {
+        return [NSString stringWithFormat:@"%@_100x100",_avatar];
+    }
+    return _avatar;
+}
+
 +(NSMutableDictionary *)userToDic:(DDUserEntity *)user
 {
     NSMutableDictionary *dic = [NSMutableDictionary new];
-    [dic safeSetObject:user.userId forKey:@"userId"];
+    [dic safeSetObject:user.objID forKey:@"userId"];
     [dic safeSetObject:user.name forKey:@"name"];
     [dic safeSetObject:user.nick forKey:@"nick"];
     [dic safeSetObject:user.avatar forKey:@"avatar"];
@@ -40,6 +49,7 @@
     [dic safeSetObject:user.token forKey:@"token"];
     [dic safeSetObject:[NSNumber numberWithInt:user.jobNum] forKey:@"jobNum"];
     [dic safeSetObject:user.telphone forKey:@"telphone"];
+    [dic safeSetObject:user.department forKey:@"departName"];
     [dic safeSetObject:[NSNumber numberWithInt:user.sex ]forKey:@"sex"];
     [dic safeSetObject:[NSNumber numberWithInt:user.roleStatus] forKey:@"roleStatus"];
     [dic safeSetObject:[NSNumber numberWithInt:user.userRole] forKey:@"userRole"];
@@ -48,7 +58,7 @@
 }
 - (void) encodeWithCoder:(NSCoder *)encoder {
 
-    [encoder encodeObject:self.userId forKey:@"userId"];
+    [encoder encodeObject:self.objID forKey:@"userId"];
     [encoder encodeObject:self.name forKey:@"name"];
     [encoder encodeObject:self.nick forKey:@"nick"];
     [encoder encodeObject:self.avatar forKey:@"avatar"];
@@ -67,7 +77,7 @@
 - (id)initWithCoder:(NSCoder *)aDecoder
 {
     if((self = [super init])) {
-        self.userId = [aDecoder decodeObjectForKey:@"userId"];
+        self.objID = [aDecoder decodeObjectForKey:@"userId"];
         self.name = [aDecoder decodeObjectForKey:@"name"];
         self.nick = [aDecoder decodeObjectForKey:@"nickName"];
         self.title = [aDecoder decodeObjectForKey:@"title"];
@@ -107,7 +117,7 @@
 +(id)dicToUserEntity:(NSDictionary *)dic
 {
     DDUserEntity *user = [DDUserEntity new];
-    user.userId = [dic safeObjectForKey:@"userId"];
+    user.objID = [dic safeObjectForKey:@"userId"];
     user.name = [dic safeObjectForKey:@"name"];
     user.nick = [dic safeObjectForKey:@"nickName"];
     user.title = [dic safeObjectForKey:@"title"];
@@ -123,6 +133,7 @@
     user.sex = [[dic safeObjectForKey:@"sex"] integerValue];
     user.roleStatus = [[dic safeObjectForKey:@"roleStatus"] integerValue];
     user.lastUpdateTime = [[dic safeObjectForKey:@"lastUpdateTime"] integerValue];
+    user.pyname = [dic safeObjectForKey:@"pyname"];
     return user;
 
 }

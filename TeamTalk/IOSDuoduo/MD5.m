@@ -24,11 +24,7 @@
 			];	
 }
 
-+ (NSString *)getEncryptedURLForWebView:(NSString *)originalURL {
-	NSString *oldString = [NSString stringWithString:originalURL];
-	NSString *authValue = [MD5 getMD5:[NSString stringWithFormat:@"%@%@", oldString, @"xiamigogo"]];
-	return [NSString stringWithFormat:@"%@&auth=%@", oldString, authValue];
-}
+
 
 
 +(NSString*)fileMD5:(NSString*)path

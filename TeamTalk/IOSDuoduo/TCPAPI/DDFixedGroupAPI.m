@@ -16,7 +16,7 @@
  */
 - (int)requestTimeOutTimeInterval
 {
-    return 2;
+    return TimeOutTimeInterval;
 }
 
 /**
@@ -80,7 +80,7 @@
             
             int groupType = [bodyData readInt];
             DDGroupEntity* group = [[DDGroupEntity alloc] init];
-            group.groupId = groupId;
+            group.objID = groupId;
             group.name = groupName;
             group.avatar = groupAvatar;
             group.groupCreatorId = groupCreator;
@@ -115,10 +115,11 @@
     {
         DDDataOutputStream *dataout = [[DDDataOutputStream alloc] init];
         
-        [dataout writeInt:IM_PDU_HEADER_LEN];
+        [dataout writeInt:0];
         [dataout writeTcpProtocolHeader:MODULE_ID_GROUP
                                     cId:CMD_ID_GROUP_LIST_REQ
                                   seqNo:seqNo];
+        [dataout writeDataCount];
 //        log4CInfo(@"serviceID:%i cmdID:%i --> about group",MODULE_ID_GROUP,CMD_ID_GROUP_LIST_REQ);
         return [dataout toByteArray];
     };

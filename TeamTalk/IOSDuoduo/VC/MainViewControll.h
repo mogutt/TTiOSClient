@@ -7,7 +7,9 @@
 //
 
 #import <UIKit/UIKit.h>
-
-@interface MainViewControll : UITabBarController<UITabBarControllerDelegate>
-
+#import "ContactsViewController.h"
+@interface MainViewControll : UITabBarController<UITabBarControllerDelegate,UITabBarDelegate>
+@property(strong)UINavigationController *nv1;
+@property(strong)ContactsViewController *contacts;
+-(void)setselectIndex:(int)index;
 @end

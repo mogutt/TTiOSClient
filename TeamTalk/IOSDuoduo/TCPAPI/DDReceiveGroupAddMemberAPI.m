@@ -28,7 +28,7 @@
  */
 - (int)responseCommandID
 {
-    return CMD_ID_GROUP_JOIN_GROUP_RES;
+    return CMD_ID_GROUP_CHANGE_GROUP_RES;
 }
 
 /**

@@ -20,6 +20,7 @@
 #import "ContactsModule.h"
 #import "DDDatabaseUtil.h"
 #import "DDAllUserAPI.h"
+#import "ReceiveKickoffAPI.h"
 @interface LoginModule(privateAPI)
 
 - (void)p_registerAPI;
@@ -52,7 +53,6 @@
     if (self)
     {
         _httpServer = [[DDHttpServer alloc] init];
-        _tokenServer = [[DDTokenManager alloc] init];
         _msgServer = [[DDMsgServer alloc] init];
         _tcpServer = [[DDTcpServer alloc] init];
         _loginServer = [[DDLoginServer alloc] init];
@@ -62,101 +62,99 @@
     return self;
 }
 
-- (NSString*)token
-{
-    return [_tokenServer.token copy];
-}
 
 #pragma mark Public API
 - (void)loginWithUsername:(NSString*)name password:(NSString*)password success:(void(^)(DDUserEntity* loginedUser))success failure:(void(^)(NSString* error))failure
 {
-        //连接登录服务器
-        [_tcpServer loginTcpServerIP:SERVER_IP port:SERVER_PORT Success:^{
-            //获取消息服务器ip
-            [_loginServer connectLoginServerSuccess:^(NSDictionary *loginEntity) {
-                //连接消息服务器
-                [_tcpServer loginTcpServerIP:[loginEntity objectForKey:@"ip2"] port:[[loginEntity objectForKey:@"port"] intValue] Success:^{
-                    [_msgServer checkUserID:name Pwd:password token:nil success:^(id object) {
-                        _lastLoginPassword=password;
-                        _lastLoginUserName=name;
-                        DDClientState* clientState = [DDClientState shareInstance];
-                        clientState.userState=DDUserOnline;
-                        _relogining=YES;
-                        DDUserEntity* user = [DDUserEntity dicToUserEntity:object];
-                        [_tokenServer startAutoRefreshToken];
-                        [self p_loadAllUsersCompletion:^{
-                            
-                        }];
-                        success(user);
-                        [ContactsModule getDepartmentData:^(id response) {
-                            if (response) {
-                                NSArray *array = (NSArray *)response;
-                                
-                                [[DDDatabaseUtil instance] insertDepartments:array completion:^(NSError *error) {
-                                    if (!error) {
-                                        NSLog(@"插入组织架构完成");
-                                    }
-                                }];
-                            }
-                        }];
-
-                      
-                    } failure:^(id object) {
-                        DDLog(@"登录验证失败");
-                      
-                        failure(@"登录验证失败");
+    //连接登录服务器
+    [_tcpServer loginTcpServerIP:SERVER_IP port:SERVER_PORT Success:^{
+        //获取消息服务器ip
+        [_loginServer connectLoginServerSuccess:^(NSDictionary *loginEntity) {
+            //连接消息服务器
+            [_tcpServer loginTcpServerIP:[loginEntity objectForKey:@"ip2"] port:[[loginEntity objectForKey:@"port"] intValue] Success:^{
+                [_msgServer checkUserID:name Pwd:password token:nil success:^(id object) {
+                    _lastLoginPassword=password;
+                    _lastLoginUserName=name;
+                    DDClientState* clientState = [DDClientState shareInstance];
+                    clientState.userState=DDUserOnline;
+                    _relogining=YES;
+                    DDUserEntity* user = [DDUserEntity dicToUserEntity:(NSDictionary *)object];
+                    TheRuntime.user=user;
+                    [TheRuntime updateData];
+                    [DDNotificationHelp postNotification:DDNotificationUserLoginSuccess userInfo:nil object:user];
+                    [self p_loadAllUsersCompletion:^{
+                        
                     }];
-                } failure:^{
-                    DDLog(@"连接消息服务器出错");
+                    success(user);
+                    [ContactsModule getDepartmentData:^(id response) {
+                        if (response) {
+                            NSArray *array = (NSArray *)response;
+                            
+                            [[DDDatabaseUtil instance] insertDepartments:array completion:^(NSError *error) {
+                                if (!error) {
+                                    NSLog(@"插入组织架构完成");
+                                }
+                            }];
+                        }
+                    }];
                     
-                    failure(@"连接消息服务器出错");
+                    
+                } failure:^(id object) {
+                    DDLog(@"登录验证失败");
+                    
+                    failure(@"登录验证失败");
                 }];
             } failure:^{
-                DDLog(@"获取消息服务器IP出错");
-               
-                failure(@"获取消息服务器IP出错");
+                DDLog(@"连接消息服务器出错");
+                
+                failure(@"连接消息服务器出错");
             }];
         } failure:^{
-            DDLog(@"连接登录服务器失败");
-         
-            failure(@"连接登录服务器失败");
+            DDLog(@"获取消息服务器IP出错");
+            
+            failure(@"获取消息服务器IP出错");
         }];
-    }
+    } failure:^{
+        DDLog(@"连接登录服务器失败");
+        
+        failure(@"连接登录服务器失败");
+    }];
+}
 
 - (void)reloginSuccess:(void(^)())success failure:(void(^)(NSString* error))failure
 {
-
-        [_tcpServer loginTcpServerIP:SERVER_IP port:SERVER_PORT Success:^{
-            //获取消息服务器ip
-            [_loginServer connectLoginServerSuccess:^(NSDictionary *loginEntity) {
-                //连接消息服务器
-                [_tcpServer loginTcpServerIP:[loginEntity objectForKey:@"ip2"] port:[[loginEntity objectForKey:@"port"] intValue] Success:^{
+    
+    [_tcpServer loginTcpServerIP:SERVER_IP port:SERVER_PORT Success:^{
+        //获取消息服务器ip
+        [_loginServer connectLoginServerSuccess:^(NSDictionary *loginEntity) {
+            //连接消息服务器
+            [_tcpServer loginTcpServerIP:[loginEntity objectForKey:@"ip2"] port:[[loginEntity objectForKey:@"port"] intValue] Success:^{
+                
+                [_msgServer checkUserID:_lastLoginUserName Pwd:_lastLoginPassword token:nil success:^(id object) {
+                    DDClientState* clientState = [DDClientState shareInstance];
+                    clientState.userState=DDUserOnline;
+                    success();
+                } failure:^(id object) {
+                    DDLog(@"登录验证失败");
                     
-                    [_msgServer checkUserID:_lastLoginUserName Pwd:_lastLoginPassword token:nil success:^(id object) {
-                        DDClientState* clientState = [DDClientState shareInstance];
-                        clientState.userState=DDUserOnline;
-                        success();
-                    } failure:^(id object) {
-                        DDLog(@"登录验证失败");
-                        
-                        failure(@"登录验证失败");
-                    }];
-                } failure:^{
-                    DDLog(@"连接消息服务器出错");
-                    
-                    failure(@"连接消息服务器出错");
+                    failure(@"登录验证失败");
                 }];
             } failure:^{
-                DDLog(@"获取消息服务器IP出错");
+                DDLog(@"连接消息服务器出错");
                 
-                failure(@"获取消息服务器IP出错");
+                failure(@"连接消息服务器出错");
             }];
         } failure:^{
-            DDLog(@"连接登录服务器失败");
+            DDLog(@"获取消息服务器IP出错");
             
-            failure(@"连接登录服务器失败");
+            failure(@"获取消息服务器IP出错");
         }];
-
+    } failure:^{
+        DDLog(@"连接登录服务器失败");
+        
+        failure(@"连接登录服务器失败");
+    }];
+    
     
     
 }
@@ -179,10 +177,11 @@
 //
 - (void)p_registerAPI
 {
-//    DDReceiveKickAPI* api = [[DDReceiveKickAPI alloc] init];
-//    [api registerAPIInAPIScheduleReceiveData:^(id object, NSError *error) {
-//        [NotificationHelp postNotification:notificationUserKickouted userInfo:nil object:nil];
-//    }];
+        ReceiveKickoffAPI* api = [[ReceiveKickoffAPI alloc] init];
+        [api registerAPIInAPIScheduleReceiveData:^(id object, NSError *error) {
+          
+            [DDClientState shareInstance].userState = DDUserKickout;
+        }];
 }
 /**
  *  登录成功后获取所有用户
@@ -209,7 +208,7 @@
                         completion();
                     });
                 }];
-
+                
             }
             
         }

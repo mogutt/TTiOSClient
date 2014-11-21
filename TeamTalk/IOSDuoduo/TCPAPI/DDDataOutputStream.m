@@ -68,7 +68,15 @@
     length = length + len;
 }
 
-
+-(void)writeDataCount
+{
+    int8_t ch[4];
+    for(int32_t i = 0;i<4;i++){
+        ch[i] = ((length >> ((3 - i)*8)) & 0x0ff);
+    }
+    
+    [data replaceBytesInRange:NSMakeRange(0, 4) withBytes:ch];
+}
 
 - (NSMutableData *)toByteArray{
     return [[NSMutableData alloc] initWithData:data];

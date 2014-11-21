@@ -15,7 +15,9 @@
 #import "DDDatabaseUtil.h"
 #import "DDGroupModule.h"
 #import "RuntimeStatus.h"
+#import "DDUserModule.h"
 #import "DDGroupEntity.h"
+#import "SpellLibrary.h"
 @implementation ContactsModule
 - (instancetype)init
 {
@@ -29,6 +31,7 @@
 }
 -(void)initContactsData
 {
+   
     [[DDDatabaseUtil instance] getAllUsers:^(NSArray *contacts, NSError *error) {
         for (DDUserEntity *user in contacts) {
             [[DDDatabaseUtil instance] getDepartmentFromID:user.departId completion:^(DDepartment *department) {
@@ -45,10 +48,8 @@
         }
     }];
     
-    //获取固定群
-   
     
-        }
+}
 
 -(void)addContact:(DDUserEntity *)user
 {
@@ -133,7 +134,7 @@
         }
         for (int i = 0;i<[arr count];i++) {
             NSDictionary *dic = [arr objectAtIndex:i];
-            if ([[dic objectForKey:@"userId"] isEqualToString:user.userId]) {
+            if ([[dic objectForKey:@"userId"] isEqualToString:user.objID]) {
                 [arr removeObject:dic];
                 [userDefaults setObject:arr forKey:@"favuser"];
                 return;
@@ -164,7 +165,7 @@
     NSMutableArray *arr = [NSMutableArray arrayWithArray:[userDefaults objectForKey:@"favuser"]];
     for (int i = 0;i<[arr count];i++) {
         NSDictionary *dic = [arr objectAtIndex:i];
-        if ([[dic objectForKey:@"userId"] isEqualToString:user.userId]) {
+        if ([[dic objectForKey:@"userId"] isEqualToString:user.objID]) {
             return YES;
         }
     }
@@ -193,9 +194,5 @@
         }
     }];
 }
--(NSArray *)loadDepartmentFromDisk
-{
-    return  [NSArray arrayWithContentsOfFile:Departmentlist];
-   
-}
+
 @end

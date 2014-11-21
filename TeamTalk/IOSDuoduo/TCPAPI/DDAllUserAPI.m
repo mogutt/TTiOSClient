@@ -52,7 +52,7 @@
 
 /**
  *  请求返回的commendID
- * 
+ *
  *  @return 对应的commendID
  */
 - (int)responseCommendID
@@ -71,7 +71,7 @@
     Analysis analysis = (id)^(NSData* data)
     {
         DDDataInputStream* bodyData = [DDDataInputStream dataInputStreamWithData:data];
-
+        
         uint32_t userCnt = [bodyData readInt];
         NSMutableArray *userList = [[NSMutableArray alloc] init];
         
@@ -106,7 +106,7 @@
                        };
             DDUserEntity *user = [DDUserEntity dicToUserEntity:result];
             [userList addObject:user];
-        
+            
         }
         return userList;
     };
@@ -124,11 +124,12 @@
     {
         DDDataOutputStream *dataout = [[DDDataOutputStream alloc] init];
         
-        [dataout writeInt:IM_PDU_HEADER_LEN];
+        [dataout writeInt:0];
         [dataout writeTcpProtocolHeader:DDSERVICE_FRI
                                     cId:CMD_FRI_ALL_USER_REQ
                                   seqNo:seqNo];
-//        log4CInfo(@"serviceID:%i cmdID:%i --> get all user",MODULE_ID_FRIENDLIST,CMD_FRI_ALL_USER_REQ);
+        [dataout writeDataCount];
+        //        log4CInfo(@"serviceID:%i cmdID:%i --> get all user",MODULE_ID_FRIENDLIST,CMD_FRI_ALL_USER_REQ);
         return [dataout toByteArray];
     };
     return package;

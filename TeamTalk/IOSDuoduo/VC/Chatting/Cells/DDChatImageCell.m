@@ -15,6 +15,7 @@
 #import "DDAppDelegate.h"
 #import "DDDatabaseUtil.h"
 #import "DDMessageSendManager.h"
+#import "ChattingMainViewController.h"
 #import "DDSendPhotoMessageAPI.h"
 @implementation DDChatImageCell
 {
@@ -36,6 +37,9 @@
 }
 -(void)showPreview
 {
+    if (self.imgView.image == nil) {
+        return;
+    }
     [self.photos removeAllObjects];
     [self.photos addObject:[MWPhoto photoWithImage:self.imgView.image]];
     MWPhotoBrowser *browser = [[MWPhotoBrowser alloc] initWithDelegate:self];
@@ -46,14 +50,15 @@
     [browser setCurrentPhotoIndex:0];
     DDChatImagePreviewViewController *preViewControll = [DDChatImagePreviewViewController new];
     preViewControll.photos=self.photos;
-    #warning 处理跳转
-    [TheAppDel.nv pushViewController:preViewControll animated:YES];
+    
+    [[ChattingMainViewController shareInstance].navigationController pushViewController:preViewControll animated:YES];
 }
 
 - (void)setContent:(DDMessageEntity*)content
 {
     
     [super setContent:content];
+#warning 暂时用菊花代替加载进度条
     NSDictionary* messageContent = [NSDictionary initWithJsonString:content.msgContent];
     if (!messageContent)
     {
@@ -61,8 +66,9 @@
         urlString = [urlString stringByReplacingOccurrencesOfString:DD_MESSAGE_IMAGE_PREFIX withString:@""];
         urlString = [urlString stringByReplacingOccurrencesOfString:DD_MESSAGE_IMAGE_SUFFIX withString:@""];
         NSURL* url = [NSURL URLWithString:urlString];
-        [self.imgView setImageWithURL:url placeholderImage:nil completed:^(UIImage *image, NSError *error, SDImageCacheType cacheType) {
-            
+        [self showSending];
+        [self.imgView sd_setImageWithURL:url completed:^(UIImage *image, NSError *error, SDImageCacheType cacheType, NSURL *imageURL) {
+             [self showSendSuccess];
         }];
         return;
     }
@@ -78,62 +84,36 @@
         //加载服务器上的图片
         NSString* url = messageContent[DD_IMAGE_URL_KEY];
         __weak DDChatImageCell* weakSelf = self;
-        [self.imgView setImageWithURL:[NSURL URLWithString:url] placeholderImage:nil options:SDWebImageProgressiveDownload progress:^(NSInteger receivedSize, NSInteger expectedSize) {
-            
-        } completed:^(UIImage *image, NSError *error, SDImageCacheType cacheType) {
-            [weakSelf.imgView setImage:image];
+
+        [self showSending];
+        [self.imgView sd_setImageWithURL:[NSURL URLWithString:url] completed:^(UIImage *image, NSError *error, SDImageCacheType cacheType, NSURL *imageURL) {
+            [weakSelf showSendSuccess];
+            if (error) {
+                
+            }
         }];
     }
-//dujia：以下代码会让TableView很卡
-//    ALAssetsLibraryAssetForURLResultBlock resultblock = ^(ALAsset *myasset)
-//    
-//    {
-//        
-//        ALAssetRepresentation *rep = [myasset defaultRepresentation];
-//        
-//        CGImageRef iref = [rep fullResolutionImage];
-//        
-//        if (iref) {
-//            UIImage *image = [UIImage imageWithCGImage:iref];
-//            [self.imgView setImage:image];
-//            
-//           
-//        }
-//        
-//    };
-//    
-//    ALAssetsLibraryAccessFailureBlock failureblock  = ^(NSError *myerror)
-//    
-//    {
-//        NSLog(@"cant get image - %@",[myerror localizedDescription]);
-//        
-//    };
-//    
-//    NSURL *asseturl = [NSURL URLWithString:content.msgContent];
-//    ALAssetsLibrary* assetslibrary = [[ALAssetsLibrary alloc] init];
-//    [assetslibrary assetForURL:asseturl
-//                   resultBlock:resultblock
-//                  failureBlock:failureblock];
+   
 }
 #pragma mark -
 #pragma mark DDChatCellProtocol Protocol
 - (CGSize)sizeForContent:(DDMessageEntity*)content
 {
-//    float leigth =180;
-//    float width = 170;
+    //    float leigth =180;
+    //    float width = 170;
     float height = 127;
-    float width = 76;
+    float width = 80;
     return CGSizeMake(width, height);
 }
 
 - (float)contentUpGapWithBubble
 {
-    return 2;
+    return 1;
 }
 
 - (float)contentDownGapWithBubble
 {
-    return 2;
+    return 1;
 }
 
 - (float)contentLeftGapWithBubble
@@ -141,9 +121,9 @@
     switch (self.location)
     {
         case DDBubbleRight:
-            return 2;
+            return 1;
         case DDBubbleLeft:
-            return 10;
+            return 6.5;
     }
     return 0;
 }
@@ -153,10 +133,10 @@
     switch (self.location)
     {
         case DDBubbleRight:
-            return 10;
+            return 6.5;
             break;
         case DDBubbleLeft:
-            return 2;
+            return 1;
             break;
     }
     return 0;
@@ -180,13 +160,13 @@
 }
 
 /*
-// Only override drawRect: if you perform custom drawing.
-// An empty implementation adversely affects performance during animation.
-- (void)drawRect:(CGRect)rect
-{
-    // Drawing code
-}
-*/
+ // Only override drawRect: if you perform custom drawing.
+ // An empty implementation adversely affects performance during animation.
+ - (void)drawRect:(CGRect)rect
+ {
+ // Drawing code
+ }
+ */
 #pragma mark -
 #pragma mark DDMenuImageView Delegate
 - (void)clickTheSendAgain:(MenuImageView*)imageView
@@ -206,8 +186,12 @@
     __block UIImage* image = [[SDImageCache sharedImageCache] imageFromDiskCacheForKey:locaPath];
     if (!image)
     {
-        [self showSendFailure];
-        return ;
+        NSData* data = [[PhotosCache sharedPhotoCache] photoFromDiskCacheForKey:locaPath];
+        image = [[UIImage alloc] initWithData:data];
+        if (!image) {
+            [self showSendFailure];
+            return ;
+        }
     }
     [[DDSendPhotoMessageAPI sharedPhotoCache] uploadImage:locaPath success:^(NSString *imageURL) {
         NSDictionary* tempMessageContent = [NSDictionary initWithJsonString:message.msgContent];
@@ -215,10 +199,8 @@
         [mutalMessageContent setValue:imageURL forKey:DD_IMAGE_URL_KEY];
         NSString* messageContent = [mutalMessageContent jsonString];
         message.msgContent = messageContent;
-        DDLog(@"---------->上传图片成功!!!");
         image = nil;
-        BOOL isGroup = message.msgType<5?NO:YES;
-        [[DDMessageSendManager instance] sendMessage:imageURL isGroup:isGroup forSessionID:message.sessionId completion:^(DDMessageEntity* theMessage,NSError *error) {
+        [[DDMessageSendManager instance] sendMessage:message isGroup:[message isGroupMessage] forSessionID:message.sessionId completion:^(DDMessageEntity* theMessage,NSError *error) {
             if (error)
             {
                 DDLog(@"发送消息失败");

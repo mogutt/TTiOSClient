@@ -38,50 +38,56 @@ typedef void(^Success)(id object);
     {
         _connecting = NO;
         _connectTimes = 0;
-//        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(n_receiveLoginMsgServerNotification:) name:notificationLoginMsgServerSuccess object:nil];
+        //        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(n_receiveLoginMsgServerNotification:) name:notificationLoginMsgServerSuccess object:nil];
     }
     return self;
 }
 
 -(void)checkUserID:(NSString*)userID Pwd:(NSString *)password token:(NSString*)token success:(void(^)(id object))success failure:(void(^)(id object))failure
 {
-    
-    if (!_connecting)
+    if(userID && password)
     {
-        
-        NSNumber* clientType = @(17);
-        
-        NSArray* parameter = @[userID,[MD5 getMD5:password],[NSNumber numberWithInteger:1],clientType];
-        
-        DDLoginAPI* api = [[DDLoginAPI alloc] init];
-        [api requestWithObject:parameter Completion:^(id response, NSError *error) {
-            if (!error)
-            {
-                if (response)
+        if (!_connecting)
+        {
+            
+            NSNumber* clientType = @(17);
+            
+            NSArray* parameter = @[userID,[MD5 getMD5:password],[NSNumber numberWithInteger:1],clientType];
+            
+            DDLoginAPI* api = [[DDLoginAPI alloc] init];
+            [api requestWithObject:parameter Completion:^(id response, NSError *error) {
+                if (!error)
                 {
-                    /*
-                     result = @{@"serverTime":@(serverTime),
-                     @"result":@(loginResult),
-                     @"state":@(state),
-                     @"userName":userName,
-                     @"nickName":nickName,
-                     @"avatar":avatar,
-                     @"userType":@(userType)};
-                     */
-                    success(response);
+                    if (response)
+                    {
+                        /*
+                         result = @{@"serverTime":@(serverTime),
+                         @"result":@(loginResult),
+                         @"state":@(state),
+                         @"userName":userName,
+                         @"nickName":nickName,
+                         @"avatar":avatar,
+                         @"userType":@(userType)};
+                         */
+                        success(response);
+                    }
+                    else
+                    {
+                        NSError* newError = [NSError errorWithDomain:@"登录验证失败" code:6 userInfo:nil];
+                        failure(newError);
+                    }
                 }
                 else
                 {
-                    NSError* newError = [NSError errorWithDomain:@"登录验证失败" code:6 userInfo:nil];
-                    failure(newError);
+                    DDLog(@"error:%@",[error domain]);
+                    failure(error);
                 }
-            }
-            else
-            {
-                DDLog(@"error:%@",[error domain]);
-                failure(error);
-            }
-        }];
+            }];
+        }else{
+            failure([NSError errorWithDomain:@"用户名密码未空" code:909 userInfo:nil]);
+        }
+    
+   
     }
 }
 

@@ -21,11 +21,15 @@
     }
     return self;
 }
-
+-(void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    [self.tabBarController.tabBar setHidden:YES];
+}
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    
+
     self.title=@"预览";
     self.view.backgroundColor=[UIColor whiteColor];
     self.browser = [[MWPhotoBrowser alloc] initWithDelegate:self];
@@ -38,10 +42,7 @@
     
     // Do any additional setup after loading the view.
 }
--(void)viewWillAppear:(BOOL)animated
-{
-    [super viewWillAppear:animated];
-}
+
 - (NSUInteger)numberOfPhotosInPhotoBrowser:(MWPhotoBrowser *)photoBrowser{
     
     return [self.photos count];

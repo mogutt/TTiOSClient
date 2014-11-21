@@ -27,13 +27,15 @@
  *  @param sender user or group
  */
 - (void)addSpellForObject:(id)sender;
-
+- (void)addDeparmentSpellForObject:(id)sender;
+-(BOOL)isEmpty;
 /**
  *  根据给出拼音找出相关的用户名
  *
  *  @param spell 拼音
  */
 - (NSMutableArray*)checkoutForWordsForSpell:(NSString*)spell;
+- (NSMutableArray*)checkoutForWordsForSpell_Deparment:(NSString*)spell;
 
 /**
  *  获得某个词的拼音

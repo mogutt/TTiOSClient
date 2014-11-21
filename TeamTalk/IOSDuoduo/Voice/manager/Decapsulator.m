@@ -70,6 +70,8 @@
 
 //将ogg格式数据转换为pcm数据
 - (void )convertOggToPCMWithData:(NSData *)oggData {
+    NSString *string = [[NSString alloc] initWithData:oggData encoding:NSUTF8StringEncoding];
+    NSLog(@"string------->%@",string);
     const Byte *oggBytes = [oggData bytes];
     int oggByteSize = [oggData length];
     int readedBytes = 0;

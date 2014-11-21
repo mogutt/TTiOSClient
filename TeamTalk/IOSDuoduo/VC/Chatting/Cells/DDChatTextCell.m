@@ -116,7 +116,6 @@ static CGFloat const contentMaxWidth = 300.0;
 {
     CGSize size = [self sizeForContent:message];
     float height = [self contentUpGapWithBubble] + [self contentDownGapWithBubble] + size.height + dd_bubbleUpDown * 2;
-    DDLog(@"asd");
     return height;
 }
 
@@ -151,22 +150,25 @@ static CGFloat const contentMaxWidth = 300.0;
 }
 -(void)sendTextAgain:(DDMessageEntity *)message
 {
-    BOOL isGroup = message.msgType<5?NO:YES;
-    [[DDMessageSendManager instance] sendMessage:message.msgContent isGroup:isGroup  forSessionID:message.sessionId completion:^(DDMessageEntity* theMessage,NSError *error) {
+    message.state = DDMessageSending;
+    [self showSending];
+    [[DDMessageSendManager instance] sendMessage:message isGroup:[message isGroupMessage]  forSessionID:message.sessionId completion:^(DDMessageEntity* theMessage,NSError *error) {
         if (error)
         {
             DDLog(@"发送消息失败");
             //刷新消息所在行
+             [self showSendFailure];
             message.state = DDMessageSendFailure;
             [[DDDatabaseUtil instance] updateMessageForMessage:message completion:^(BOOL result) {
                 if (result)
                 {
-                    [self showSendFailure];
+                   
                 }
             }];
         }
         else
         {
+            [self showSendSuccess];
             DDLog(@"发送消息成功,content:%@",message.msgContent);
             //刷新消息所在行
             message.state = DDmessageSendSuccess;
@@ -174,7 +176,7 @@ static CGFloat const contentMaxWidth = 300.0;
             [[DDDatabaseUtil instance] updateMessageForMessage:message completion:^(BOOL result) {
                 if (result)
                 {
-                    [self showSendSuccess];
+                    
                 }
             }];
         }

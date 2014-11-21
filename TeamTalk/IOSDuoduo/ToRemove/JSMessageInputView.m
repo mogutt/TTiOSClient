@@ -182,7 +182,7 @@
         [self setHeight:height + 10];
     }
     [self setBottom:bottom];
-    [growingTextView setContentInset:UIEdgeInsetsZero];
+//    [growingTextView setContentInset:UIEdgeInsetsZero];
     //    [UIView animateKeyframesWithDuration:0.25 delay:0 options:0 animations:^{
     //
     //    } completion:^(BOOL finished) {

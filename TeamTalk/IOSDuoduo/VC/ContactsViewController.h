@@ -8,7 +8,7 @@
 
 #import <UIKit/UIKit.h>
 #import "DDSessionEntity.h"
-typedef void(^Block)(NSArray *array);
 @interface ContactsViewController : UIViewController<UITableViewDataSource,UITableViewDelegate,UISearchBarDelegate,UISearchDisplayDelegate,UIScrollViewDelegate>
-@property(copy)Block block;
+@property(strong)NSString *sectionTitle;
+@property(assign)BOOL isSearchResult;
 @end

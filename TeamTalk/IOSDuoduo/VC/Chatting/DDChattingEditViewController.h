@@ -12,6 +12,7 @@
 @interface DDChattingEditViewController : UIViewController<UITableViewDataSource,UITableViewDelegate,UICollectionViewDataSource,UICollectionViewDelegate>
 @property(assign)BOOL isGroup;
 @property(strong)NSString *groupName;
-@property(nonatomic,strong)NSMutableArray *users;
+@property(nonatomic,strong)NSMutableArray *items;
 @property(strong)DDSessionEntity *session;
+-(void)refreshUsers:(NSMutableArray *)array;
 @end

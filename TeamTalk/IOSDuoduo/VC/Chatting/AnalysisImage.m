@@ -7,10 +7,11 @@
 //
 
 #import "AnalysisImage.h"
-
+#import "DDMessageModule.h"
 @implementation AnalysisImage
 +(void)analysisImage:(DDMessageEntity *)message Block:(void(^)(NSMutableArray *array))block
 {
+ 
     NSMutableArray *arr = [NSMutableArray new];
     if (message.msgContent.length>0) {
         NSMutableString *string = [NSMutableString stringWithString:message.msgContent];
@@ -21,8 +22,9 @@
                 if (msg.length>0) {
                     DDMessageEntity *tempMessage = [message copy];
                     if ([msg hasPrefix:@"http:"]) {
-                        tempMessage.msgType=DDMessageTypeImage;
+                        tempMessage.msgContentType=DDMessageTypeImage;
                     }
+                    tempMessage.msgID=[DDMessageModule  getMessageID];
                     tempMessage.msgContent=msg;
                     [arr addObject:tempMessage];
                 }
@@ -30,12 +32,12 @@
         }else
         {
             if ([string hasPrefix:@"http:"]) {
-                message.msgType=DDMessageTypeImage;
+                message.msgContentType=DDMessageTypeImage;
                 message.msgContent=string;
             }
             [arr addObject:message];
         }
     }
-    block(arr);
+    block(@[message]);
 }
 @end

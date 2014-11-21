@@ -102,7 +102,9 @@ static NSString* const DD_URL_BASE = @"http://www.mogujie.com/";
          NSDictionary *responseDictionary = [NSJSONSerialization JSONObjectWithData:responseObject options:0 error:nil];
         [DDAFClient handleRequest:responseDictionary success:success failure:failure];
     } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
-        BLOCK_SAFE_RUN(failure,error);
+            if([error.domain isEqualToString:NSURLErrorDomain])
+              error = [NSError errorWithDomain:@"没有网络连接。" code:-100 userInfo:nil];
+            BLOCK_SAFE_RUN(failure,error);
     }];
 }
 

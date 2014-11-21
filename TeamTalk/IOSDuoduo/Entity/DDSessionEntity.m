@@ -60,7 +60,10 @@
     }
     return name;
 }
-
+-(void)setSessionName:(NSString *)theName
+{
+    name = theName;
+}
 - (NSUInteger)timeInterval
 {
     if (timeInterval == 0)
@@ -95,8 +98,9 @@
 
 - (void)updateUpdateTime:(NSUInteger)date
 {
+     timeInterval = date;
     if (_sessionType == SESSIONTYPE_SINGLE ) {
-        timeInterval = date;
+       
         [[DDUserModule shareInstance] getUserForUserID:_sessionID Block:^(DDUserEntity *user) {
             if (user)
             {
@@ -107,6 +111,13 @@
             }
             
         }];
+    }else
+    {
+//       DDGroupEntity *group= [[DDGroupModule instance] getGroupByGId:_sessionID];
+//        group.lastUpdateTime=timeInterval;
+//        [[DDDatabaseUtil instance] updateRecentGroup:group completion:^(NSError *error) {
+//            
+//        }];
     }
 }
 -(NSArray*)groupUsers
@@ -125,5 +136,13 @@
 -(NSString *)getSessionGroupID
 {
     return _sessionID;
+}
+-(BOOL)isGroup
+{
+    if(SESSIONTYPE_GROUP == self.sessionType || SESSIONTYPE_TEMP_GROUP == self.sessionType)
+    {
+        return YES;
+    }
+    return NO;
 }
 @end

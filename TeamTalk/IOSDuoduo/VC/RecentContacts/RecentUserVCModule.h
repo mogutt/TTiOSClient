@@ -10,5 +10,7 @@
 #import "DDUserModule.h"
 
 @interface RecentUserVCModule : NSObject
-- (void)loadRecentContacts:(DDLoadRecentUsersCompletion)completion;
+@property(strong)NSMutableArray *items;
+@property(strong)NSMutableArray *ids;
+@property(assign)NSInteger unreadMsgCount;
 @end

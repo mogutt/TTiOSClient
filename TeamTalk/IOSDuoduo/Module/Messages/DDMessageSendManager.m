@@ -17,7 +17,10 @@
 #import "RuntimeStatus.h"
 #import "RecentUsersViewController.h"
 #import "EmotionsModule.h"
+#import "NSDictionary+JSON.h"
+#import "UnAckMessageManager.h"
 #import "DDGroupModule.h"
+#import "DDClientState.h"
 static uint32_t seqNo = 0;
 
 @interface DDMessageSendManager(PrivateAPI)
@@ -53,18 +56,21 @@ static uint32_t seqNo = 0;
     return self;
 }
 
-- (void)sendMessage:(NSString*)content isGroup:(BOOL)isGroup forSessionID:(NSString*)sessionID completion:(DDSendMessageCompletion)completion
+- (void)sendMessage:(DDMessageEntity *)message isGroup:(BOOL)isGroup forSessionID:(NSString*)sessionID completion:(DDSendMessageCompletion)completion
 {
+    NSLog(@"%d.....>",[DDClientState shareInstance].userState);
     dispatch_async(self.sendMessageSendQueue, ^{
         DDSendMessageAPI* sendMessageAPI = [[DDSendMessageAPI alloc] init];
         uint32_t nowSeqNo = ++seqNo;
-        NSString* myUserID = [RuntimeStatus instance].user.userId;
-        NSString* newContent = [self toSendmessageContentFromContent:content];
-        DDMessageType msgType= DDMessageTypeText;
-        if (isGroup) {
-            msgType = DDGroup_Message_TypeText;
+        message.seqNo=nowSeqNo;
+        NSString* myUserID = [RuntimeStatus instance].user.objID;
+        NSString* newContent = [self toSendmessageContentFromContent:message.msgContent];
+        if ([message isImageMessage]) {
+            NSDictionary* dic = [NSDictionary initWithJsonString:message.msgContent];
+            NSString* urlPath = dic[DD_IMAGE_URL_KEY];
+            newContent=urlPath;
         }
-        NSArray* object = @[myUserID,sessionID,@(nowSeqNo),@(msgType),newContent,@""];
+        NSArray* object = @[myUserID,sessionID,newContent,@(nowSeqNo),@(isGroup?DDGroup_Message_TypeText:DDMessageTypeText)];
         if (!isGroup) {
             [[DDUserModule shareInstance] getUserForUserID:sessionID Block:^(DDUserEntity *user) {
                 if (user) {
@@ -73,7 +79,6 @@ static uint32_t seqNo = 0;
                     }
                     [[DDUserModule shareInstance] addMaintanceUser:user];
                     [[DDUserModule shareInstance] addRecentUser:user];
-                    [[DDUserModule shareInstance] moveUserIDToTopRecentUsers:user.userId];
                     [[NSNotificationCenter defaultCenter] postNotificationName:@"SentMessageSuccessfull" object:sessionID];
                 }
             }];
@@ -84,48 +89,49 @@ static uint32_t seqNo = 0;
           //  [[DDGroupModule instance] addRecentlyGroup:@[group]];
             [[NSNotificationCenter defaultCenter] postNotificationName:@"SentMessageSuccessfull" object:sessionID];
         }
-        
+        [[UnAckMessageManager instance] addMessageToUnAckQueue:message];
         [sendMessageAPI requestWithObject:object Completion:^(id response, NSError *error) {
             if (!error)
             {
                 uint32_t returnSeqNo = [response intValue];
                 if (returnSeqNo == nowSeqNo)
                 {
-                    DDMessageType type = msgType;
-                    NSUInteger messageTime = [[NSDate date] timeIntervalSince1970];
-                    if ([content hasPrefix:@"assets-library"] || [content hasPrefix:DD_MESSAGE_IMAGE_PREFIX]) {
-                        type = DDMessageTypeImage;
-                    }
-                    DDMessageEntity* message = [[DDMessageEntity alloc] initWithMsgID:0 msgType:type msgTime:messageTime sessionID:sessionID senderID:myUserID msgContent:content toUserID:sessionID];
-                    message.state = DDmessageSendSuccess;
                     
+                    NSUInteger messageTime = [[NSDate date] timeIntervalSince1970];
+                    message.msgTime=messageTime;
+                    message.seqNo=returnSeqNo;
+                    message.state=DDmessageSendSuccess;
+                    [[UnAckMessageManager instance] removeMessageFromUnAckQueue:message];
                     completion(message,nil);
                    
                 }
                 else
                 {
+                    message.state=DDMessageSendFailure;
                     NSError* error = [NSError errorWithDomain:@"发送消息失败,seqNo对不上" code:0 userInfo:nil];
-                    completion(nil,error);
+                    completion(message,error);
                 }
                 
             }
             else
             {
+                message.state=DDMessageSendFailure;
                 NSError* error = [NSError errorWithDomain:@"发送消息失败" code:0 userInfo:nil];
-                completion(nil,error);
+                completion(message,error);
             }
         }];
         
     });
 }
 
-- (void)sendVoiceMessage:(NSData*)voice filePath:(NSString*)filePath forSessionID:(NSString*)sessionID completion:(DDSendMessageCompletion)completion
+- (void)sendVoiceMessage:(NSData*)voice filePath:(NSString*)filePath forSessionID:(NSString*)sessionID isGroup:(BOOL)isGroup completion:(DDSendMessageCompletion)completion
 {
     dispatch_async(self.sendMessageSendQueue, ^{
         DDSendVoiceMessageAPI* sendVoiceMessageAPI = [[DDSendVoiceMessageAPI alloc] init];
         uint32_t nowSeqNo = ++seqNo;
-        NSString* myUserID = [RuntimeStatus instance].user.userId;
-        NSArray* object = @[myUserID,sessionID,@(nowSeqNo),@(100),@(3),voice,@""];
+        NSString* myUserID = [RuntimeStatus instance].user.objID;
+        
+        NSArray* object = @[myUserID,sessionID,@(nowSeqNo),isGroup?@(DDGroup_MessageTypeVoice):@(DDMessageTypeVoice),@(1),voice,@""];
         [sendVoiceMessageAPI requestWithObject:object Completion:^(id response, NSError *error) {
             if (!error)
             {
@@ -133,8 +139,14 @@ static uint32_t seqNo = 0;
                 if (returnSeqNo == nowSeqNo)
                 {
                     NSUInteger messageTime = [[NSDate date] timeIntervalSince1970];
-                    DDMessageEntity* message = [[DDMessageEntity alloc] initWithMsgID:0 msgType:DDMessageTypeVoice msgTime:messageTime sessionID:sessionID senderID:myUserID msgContent:filePath toUserID:sessionID];
                     
+                    DDMessageEntity* message = [[DDMessageEntity alloc] initWithMsgID:0 msgType:MESSAGE_TYPE_TEMP_GROUP msgTime:messageTime sessionID:sessionID senderID:myUserID msgContent:filePath toUserID:sessionID];
+                    if (isGroup) {
+                        message.msgContentType=DDGroup_MessageTypeVoice;
+                    }else
+                    {
+                        message.msgContentType = DDMessageTypeVoice;
+                    }
                     completion(message,nil);
                 }
                 else

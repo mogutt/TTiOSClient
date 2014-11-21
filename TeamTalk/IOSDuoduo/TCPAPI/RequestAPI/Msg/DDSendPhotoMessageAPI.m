@@ -9,6 +9,8 @@
 #import "DDSendPhotoMessageAPI.h"
 #import "AFHTTPRequestOperationManager.h"
 #import "Photo.h"
+#import "std.h"
+#import "DDCONSTANT.h"
 #import "DDMessageEntity.h"
 #import "PhotosCache.h"
 #import "NSDictionary+Safe.h"
@@ -45,29 +47,33 @@ static int max_try_upload_times = 5;
 {
     
     NSBlockOperation *operation = [NSBlockOperation blockOperationWithBlock:^(){
-        NSURL *url = [NSURL URLWithString:@""];
+        NSURL *url = [NSURL URLWithString:IMAGE_UPLOAD_IP];
         NSString *urlString =  [url.absoluteString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
         @autoreleasepool
         {
-            NSData *imageData = [[PhotosCache sharedPhotoCache] photoFromDiskCacheForKey:imagekey];
+            __block NSData *imageData = [[PhotosCache sharedPhotoCache] photoFromDiskCacheForKey:imagekey];
             if (imageData == nil) {
                 failure(@"data is emplty");
                 return;
             }
-            UIImage *image = [UIImage imageWithData:imageData];
+            __block UIImage *image = [UIImage imageWithData:imageData];
             NSString *imageName = [NSString stringWithFormat:@"image.png_%dx%d.png",image.size.width,image.size.height];
             NSDictionary *params =[NSDictionary dictionaryWithObjectsAndKeys:@"im_image",@"type", nil];
             [self.manager POST:urlString parameters:params constructingBodyWithBlock:^(id<AFMultipartFormData> formData) {
                 [formData appendPartWithFileData:imageData name:@"image" fileName:imageName mimeType:@"image/jpeg"];
             } success:^(AFHTTPRequestOperation *operation, id responseObject) {
-                NSLog(@"%@------>+++",[DDSendPhotoMessageAPI imageUrl:operation.response.URL.absoluteString]);
+                NSLog(@"%@------>+++",[DDSendPhotoMessageAPI imageUrl:operation.responseObject[@"url"]]);
+                imageData =nil;
+                image=nil;
                 NSInteger statusCode = [operation.response statusCode];
                 if (statusCode == 200) {
                     NSString *imageURL=nil;
                     if ([responseObject isKindOfClass:[NSDictionary class]]) {
                         if ([[responseObject safeObjectForKey:@"error_code"] intValue]==0) {
                                 imageURL = [responseObject safeObjectForKey:@"url"];
-                            }
+                        }else{
+                            failure([responseObject safeObjectForKey:@"error_msg"]);
+                        }
                         
                     }
                    
@@ -95,6 +101,7 @@ static int max_try_upload_times = 5;
                         [url appendString:imageURL];
                         [url appendString:@":}]&$~@#@"];
                         success(url);
+                        return ;
                     }
                 }
                 else

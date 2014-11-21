@@ -7,11 +7,13 @@
 //
 
 #import <UIKit/UIKit.h>
-
-@interface LoginViewController : UIViewController
+#import "UIButton+JSMessagesView.h"
+@interface LoginViewController : UIViewController<UITextFieldDelegate>
+@property (assign)BOOL isAutoLogin;
 @property (nonatomic,weak)IBOutlet UITextField* userNameTextField;
+@property (weak)IBOutlet UIImageView *landspace;
 @property (nonatomic,weak)IBOutlet UITextField* userPassTextField;
-
+@property(assign)BOOL isRelogin;
 - (IBAction)login:(UIButton*)button;
 -(IBAction)hiddenKeyboard:(id)sender;
 @end

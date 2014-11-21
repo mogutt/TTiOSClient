@@ -10,6 +10,8 @@
 #import "PublicProfileViewControll.h"
 #import "RuntimeStatus.h"
 #import "SettingViewController.h"
+#import "UIImageView+WebCache.h"
+#import "DDUserDetailInfoAPI.h"
 @interface MyProfileViewControll ()
 
 @end
@@ -32,9 +34,25 @@
     self.profileView.userInteractionEnabled=true;
     UITapGestureRecognizer *singleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(goPersonalProfile)];
     [self.profileView addGestureRecognizer:singleTap];
+    UIImage* placeholder = [UIImage imageNamed:@"user_placeholder"];
+    [self.avatar sd_setImageWithURL:[NSURL URLWithString:[RuntimeStatus instance].user.avatar] placeholderImage:placeholder];
+
+    DDUserDetailInfoAPI* detailInfoAPI = [[DDUserDetailInfoAPI alloc] init];
+    [detailInfoAPI requestWithObject:@[[RuntimeStatus instance].user.objID ] Completion:^(id response, NSError *error) {
+        if ([response count] > 0)
+        {
+            NSDictionary* userInfo = response[0];
+            DDUserEntity *newUser = [DDUserEntity dicToUserEntity:userInfo];
+            if (newUser) {
+                self.realName.text=newUser.name;
+                self.nickName.text=newUser.nick;
+            }
+        }
+        else
+        {
+        }
+    }];
     
-    self.realName.text=[RuntimeStatus instance].user.name;
-    self.nickName.text=[RuntimeStatus instance].user.nick;
     [self.view1.layer setBorderColor:RGB(199, 199, 196).CGColor];
     [self.view1.layer setBorderWidth:0.5];
     [self.view2.layer setBorderColor:RGB(199, 199, 196).CGColor];

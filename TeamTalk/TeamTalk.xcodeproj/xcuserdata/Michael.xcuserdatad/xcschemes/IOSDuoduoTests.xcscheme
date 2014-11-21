@@ -59,6 +59,15 @@
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       allowLocationSimulation = "YES">
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "C4EBA74E192F279100B72723"
+            BuildableName = "TeamTalkTests.xctest"
+            BlueprintName = "TeamTalkTests"
+            ReferencedContainer = "container:TeamTalk.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
       <AdditionalOptions>
       </AdditionalOptions>
    </LaunchAction>

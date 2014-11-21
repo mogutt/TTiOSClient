@@ -22,7 +22,7 @@
         [self addSubview:line];
         self.backgroundColor=RGB(249, 249, 249);
         UIButton *preview = [UIButton buttonWithType:UIButtonTypeCustom];
-        preview.frame=CGRectMake(0, 0, 45, 45);
+        preview.frame=CGRectMake(10, 0, 45, 45);
         [preview setTitle:@"预览" forState:UIControlStateNormal];
         [preview setTitle:@"预览" forState:UIControlStateHighlighted];
         [preview setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
@@ -35,8 +35,7 @@
         [self.send setTitle:@"发送" forState:UIControlStateHighlighted];
         [self.send setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
         [self.send setTitleColor:[UIColor whiteColor] forState:UIControlStateHighlighted];
-        [self.send setBackgroundImage:[UIImage imageNamed:@"dd_image_send"] forState:UIControlStateNormal];
-        [self.send setBackgroundImage:[UIImage imageNamed:@"dd_image_send"] forState:UIControlStateSelected];
+        [self.send setBackgroundColor:RGB(34, 157, 254)];
         [self.send addTarget:self action:@selector(sendPicture:) forControlEvents:UIControlEventTouchUpInside];
         [self addSubview:self.send];
     }
@@ -44,8 +43,8 @@
 }
 -(void)setSendButtonTitle:(int)num
 {
-    [self.send setTitle:[NSString stringWithFormat:@"%@ ( %d )",@"发送",num] forState:UIControlStateNormal];
-    [self.send setTitle:[NSString stringWithFormat:@"%@ ( %d )",@"发送",num] forState:UIControlStateHighlighted];
+    [self.send setTitle:[NSString stringWithFormat:@"%@(%d)",@"发送",num] forState:UIControlStateNormal];
+    [self.send setTitle:[NSString stringWithFormat:@"%@(%d)",@"发送",num] forState:UIControlStateHighlighted];
 }
 -(IBAction)previewPicture:(id)sender
 {

@@ -7,15 +7,6 @@
 //
 
 #import "std.h"
-NSString * const kInvited             = @"kInvited";
-NSString * const kUserSetting         = @"kUserSetting";
-NSString * const kLastLoginUser       = @"kLastLoginUser";
-NSString * const kLastPosition        = @"last_pos";
-NSString * const kAccessToken         = @"access_token";
-NSString * const kRefreshToken        = @"refresh_token";
-NSString * const kTokenExpiredTime    = @"expires_in";
-NSString * const kAppVersion           = @"kAppVersion";
-NSString * const kArrowCount           = @"kArrowCount";
 
 NSString *bundleVerison(){
     NSBundle * bundle=[NSBundle mainBundle];

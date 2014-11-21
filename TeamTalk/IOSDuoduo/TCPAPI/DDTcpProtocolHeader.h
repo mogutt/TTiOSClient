@@ -1,18 +1,10 @@
-/************************************************************
- * @file         TcpProtocolHeader.h
- * @author       快刀<kuaidao@mogujie.com>
- * summery       tcp服务器协议头，包括每个service下的command Id定义
- *
-     packet data unit header format:
-     length     -- 4 byte
-     version    -- 2 byte
-     flag       -- 2 byte
-     service_id -- 2 byte
-     command_id -- 2 byte
-     error      -- 2 byte
-     reserved   -- 2 byte
- ************************************************************/
-
+//
+//  DDTcpProtocolHeader.h
+//
+//
+//  Created by Michael Scofield on 2014-07-15.
+//  Copyright (c) 2014 dujia. All rights reserved.
+//
 #import <Foundation/Foundation.h>
 #import <stdint.h>
 
@@ -28,7 +20,7 @@ enum
 // 心跳包
 enum
 {
-    DDHEARTBEAT_REQ                 = 1,            
+    DDHEARTBEAT_REQ                 = 1,
     DDHEARTBEAT_SID                 =7,
     REQ_CID                         =1,
     RES_CID                         =1
@@ -82,7 +74,7 @@ enum
 {
     DDCMD_USER_INFO_REQ                     = 11,          //查询用户详情
     DDCMD_USER_INFO_RES                     = 10,           //返回用户详情
-
+    
 };
 
 //群
@@ -101,8 +93,8 @@ enum
     CMD_ID_GROUP_MSG_READ_ACK           = 11,
     CMD_ID_GROUP_CREATE_TMP_GROUP_REQ   = 12,
     CMD_ID_GROUP_CREATE_TMP_GROUP_RES   = 13,
-    CMD_ID_GROUP_JOIN_GROUP_REQ         = 14,
-    CMD_ID_GROUP_JOIN_GROUP_RES         = 15,
+    CMD_ID_GROUP_CHANGE_GROUP_REQ         = 14,
+    CMD_ID_GROUP_CHANGE_GROUP_RES         = 15,
     CMD_ID_GROUP_DIALOG_LIST_REQ        = 16,   // 最近联系群
     CMD_ID_GROUP_DIALOG_LIST_RES        = 17,
     CMD_ID_FIXED_GROUP_CHANGED          =19,

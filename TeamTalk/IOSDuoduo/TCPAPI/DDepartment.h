@@ -12,7 +12,7 @@
 @property(strong)NSString *ID;
 @property(strong)NSString *parentID;
 @property(strong)NSString *title;
-@property(strong)NSString *description;
+@property(strong)NSString *descriptionText;
 @property(strong)NSString *leader;
 @property(assign)NSInteger status;
 @property(assign)NSInteger count;

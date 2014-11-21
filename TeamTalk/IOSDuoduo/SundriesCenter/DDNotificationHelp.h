@@ -35,7 +35,7 @@ extern NSString* const DDNotificationReloadTheRecentContacts;         //刷新�
 extern NSString* const DDNotificationReceiveP2PShakeMessage;          //收到P2P消息
 extern NSString* const DDNotificationReceiveP2PInputingMessage;       //收到正在输入消息
 extern NSString* const DDNotificationReceiveP2PStopInputingMessage;   //收到停止输入消息
-
+extern NSString *const DDNotificationLoadLocalGroupFinish;             //本地最近联系群加载完成
 
 //-----------------------------------------------------------------------------
 extern NSString* const DDNotificationRecentContactsUpdate;              //最近联系人更新

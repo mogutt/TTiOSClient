@@ -100,7 +100,72 @@
         });
     }];
 }
-
+- (void)searchDepartment:(NSString*)content completion:(SearchCompletion)completion
+{
+    content = [content lowercaseString];
+    [[DDSundriesCenter instance] pushTaskToSerialQueue:^{
+        NSMutableArray* matchesIDArray = [[NSMutableArray alloc] init];
+        if (!_allUsersAndGroups || [_allUsersAndGroups count] == 0)
+        {
+            _allUsersAndGroups = [self p_getAllUsersAndGroups];
+        }
+        NSMutableArray*	matches = NULL;
+        NSUInteger	i,count;
+        NSString*		string;
+        
+        count         = [_allUsersAndGroups count];
+        matches       = [NSMutableArray array];
+        
+        // find any match in our keyword array against what was typed -
+        for (i=0; i< count; i++)
+        {
+            NSObject* user = [_allUsersAndGroups objectAtIndex:i];
+            string = [(DDUserEntity*)user department];
+            NSString* objectID = [self p_getIDForObject:user];
+            
+            if ([string rangeOfString:content].length > 0)
+            {
+                if (![matches containsObject:user])
+                {
+                    [matches addObject:user];
+                    [matchesIDArray addObject:objectID];
+                }
+            }
+        }
+        NSString* partialSpell = [[SpellLibrary instance] getSpellForWord:content];
+        NSArray* userInSpellLibaray = [[SpellLibrary instance] checkoutForWordsForSpell_Deparment:partialSpell];
+        
+        if ([userInSpellLibaray count] > 0)
+        {
+            [userInSpellLibaray enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+                NSString* objectID = [self p_getIDForObject:obj];
+                if (!objectID)
+                {
+                    return;
+                }
+                if (![matches containsObject:obj] && ![matchesIDArray containsObject:objectID]) {
+                    [matches addObject:obj];
+                    [matchesIDArray addObject:objectID];
+                }
+            }];
+        }
+        
+        [matches sortUsingComparator:^NSComparisonResult(id obj1, id obj2) {
+            if ([obj1 isKindOfClass:[DDUserEntity class]])
+            {
+                return NSOrderedAscending;
+            }
+            else
+            {
+                return NSOrderedDescending;
+            }
+        }];
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            completion(matches,nil);
+        });
+    }];
+}
 - (void)searchContent:(NSString *)content inRange:(NSArray*)ranges completion:(SearchCompletion)completion
 {
     [[DDSundriesCenter instance] pushTaskToSerialQueue:^{
@@ -181,11 +246,11 @@
     NSString* objectID = nil;
     if ([sender isKindOfClass:[DDUserEntity class]])
     {
-        objectID = [(DDUserEntity*)sender userId];
+        objectID = [(DDUserEntity*)sender objID];
     }
     else if ([sender isKindOfClass:[DDGroupEntity class]])
     {
-        objectID = [(DDGroupEntity*)sender groupId];
+        objectID = [(DDGroupEntity*)sender objID];
     }
 
     return objectID;

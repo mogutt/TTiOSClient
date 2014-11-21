@@ -16,7 +16,7 @@
  */
 - (int)requestTimeOutTimeInterval
 {
-    return 8;
+    return 20;
 }
 
 /**
@@ -59,6 +59,7 @@
     return DDCMD_MSG_RECEIVE_DATA_ACK;
 }
 
+
 /**
  *  解析数据的block
  *
@@ -91,13 +92,13 @@
         NSString* fromId = array[0];
         NSString* toId = array[1];
         int messageSeqNo = [array[2] intValue];
-        int messageTpye = 2;//消息类型
+        int messageTpye = [array[3] intValue];//消息类型
         int messageRenderType = [array[4] intValue];//消息内容类型
         NSData* messageContent = array[5];//消息内容
         NSString* messageAttachContent = array[6];//消息附件内容
         
         DDDataOutputStream *dataout = [[DDDataOutputStream alloc] init];
-        uint32_t totalLen = strLen(fromId) + strLen(toId) + [messageContent length] + strLen(messageAttachContent) + 15 + 26;
+        uint32_t totalLen = strLen(fromId) + strLen(toId) + [messageContent length] + strLen(messageAttachContent) + IM_PDU_HEADER_LEN + 25;
         DDLog(@"  getSendMsgData: 消息长度:%d",totalLen);
         
         [dataout writeInt:totalLen];

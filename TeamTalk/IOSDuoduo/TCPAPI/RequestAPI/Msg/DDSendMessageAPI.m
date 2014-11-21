@@ -16,7 +16,7 @@
  */
 - (int)requestTimeOutTimeInterval
 {
-    return 2;
+    return 10;
 }
 
 /**
@@ -88,14 +88,14 @@
         NSArray* array = (NSArray*)object;
         NSString* fromId = array[0];
         NSString* toId = array[1];
-        int messageSeqNo = [array[2] intValue];
-        char messageTpye = [array[3] intValue];//消息类型
-        NSString* messageContent = array[4];//消息内容
-        NSString* messageAttachContent = array[5];//消息附件内容
+        NSString* messageContent = array[2];//消息内容
+        int messageSeqNo = [array[3] intValue];
+        char messageTpye = [array[4] intValue];//消息类型
+        NSString *messageAttachContent=nil;
         DDDataOutputStream *dataout = [[DDDataOutputStream alloc] init];
-        uint32_t totalLen = strLen(fromId) + strLen(toId) + strLen(messageContent) + strLen(messageAttachContent) + 24 + 16+sizeof(messageTpye);
+        uint32_t totalLen = strLen(fromId) + strLen(toId) + strLen(messageContent) + strLen(messageAttachContent) + 24 + 12+sizeof(messageTpye);
         DDLog(@"  getSendMsgData: 消息长度:%d",totalLen);
-        [dataout writeInt:totalLen];
+        [dataout writeInt:0];
         [dataout writeTcpProtocolHeader:DDSERVICE_MESSAGE cId:DDCMD_MSG_DATA seqNo:seqNo];
         [dataout writeInt:messageSeqNo];
         [dataout writeUTF:fromId];
@@ -103,7 +103,8 @@
         [dataout writeInt:0];   //createTime.由msgserver生成
         [dataout writeChar:messageTpye];
         [dataout writeUTF:messageContent];
-        [dataout writeUTF:messageAttachContent];
+        [dataout writeUTF:nil];
+        [dataout writeDataCount];
         return [dataout toByteArray];
     };
     return package;

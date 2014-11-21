@@ -59,6 +59,7 @@
     return CMD_ID_GROUP_UNREAD_CNT_RES;
 }
 
+
 /**
  *  解析数据的block
  *
@@ -95,11 +96,12 @@
     {
         DDDataOutputStream *dataout = [[DDDataOutputStream alloc] init];
         
-        [dataout writeInt:IM_PDU_HEADER_LEN];
+        [dataout writeInt:0];
         [dataout writeTcpProtocolHeader:MODULE_ID_GROUP
                                     cId:CMD_ID_GROUP_UNREAD_CNT_REQ
                                   seqNo:seqNo];
         //log4CInfo(@"serviceID:%i cmdID:%i --> get group unread cnt ",MODULE_ID_GROUP,CMD_ID_GROUP_UNREAD_CNT_REQ);
+        [dataout writeDataCount];
         return [dataout toByteArray];
     };
     return package;

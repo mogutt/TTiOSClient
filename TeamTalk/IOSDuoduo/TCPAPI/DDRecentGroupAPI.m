@@ -16,7 +16,7 @@
  */
 - (int)requestTimeOutTimeInterval
 {
-    return 2;
+    return 10;
 }
 
 /**
@@ -80,7 +80,7 @@
             
             UInt32 groupType = [bodyData readInt];
             DDGroupEntity* group = [[DDGroupEntity alloc] init];
-            group.groupId = groupId;
+            group.objID = groupId;
             group.name = groupName;
             group.avatar = groupAvatar;
             group.groupCreatorId = groupCreator;
@@ -98,7 +98,7 @@
             
             [recentlyGroup addObject:group];
         }
-       
+        
         return recentlyGroup;
     };
     return analysis;
@@ -115,11 +115,11 @@
     {
         DDDataOutputStream *dataout = [[DDDataOutputStream alloc] init];
         
-        [dataout writeInt:IM_PDU_HEADER_LEN];
+        [dataout writeInt:0];
         [dataout writeTcpProtocolHeader:MODULE_ID_GROUP
                                     cId:CMD_ID_GROUP_DIALOG_LIST_REQ
                                   seqNo:seqNo];
-        
+        [dataout writeDataCount];
         return [dataout toByteArray];
     };
     return package;

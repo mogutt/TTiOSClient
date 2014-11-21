@@ -9,19 +9,21 @@
 #import "PublicProfileViewControll.h"
 #import "DDUserEntity.h"
 #import "DDSessionEntity.h"
+#import "UIImageView+WebCache.h"
 #import "ContactsModule.h"
 #import "UIImageView+WebCache.h"
 #import "ChattingMainViewController.h"
 #import "RuntimeStatus.h"
+#import "DDUserDetailInfoAPI.h"
 #import "DDDatabaseUtil.h"
+#import "DDAppDelegate.h"
+#import "DDUserModule.h"
 @interface PublicProfileViewControll ()
 @property(weak)IBOutlet UILabel *nickName;
 @property(weak)IBOutlet UILabel *realName;
 @property(weak)IBOutlet UIImageView *avatar;
 @property(weak)IBOutlet UITableView *tableView;
 @property(weak)IBOutlet UIButton *conversationBtn;
-@property(strong)NSArray *infoArray;
-@property(strong)NSMutableDictionary *profileInfos;
 -(IBAction)startConversation:(id)sender;
 @end
 
@@ -39,14 +41,35 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    if (self.user) {
-        self.nickName.text=self.user.nick;
-        self.realName.text =self.user.name;
-        //[self.avatar setImageWithURL:[NSURL URLWithString:self.user.avatar]];
-        //self.infoArray = [[NSArray alloc] initWithObjects:self.user.department, nil];
-
+    self.nickName.text = self.user.nick;
+    self.realName.text = self.user.name;
+    if([self.user.objID isEqualToString:TheRuntime.user.objID])
+    {
+        [self.conversationBtn setHidden:YES];
+    }else
+    {
+        [self.conversationBtn setHidden:NO];
     }
-    [self initData];
+    __block NSString *departmentName = @" ";
+
+    DDUserDetailInfoAPI* detailInfoAPI = [[DDUserDetailInfoAPI alloc] init];
+    [detailInfoAPI requestWithObject:@[self.user.objID] Completion:^(id response, NSError *error) {
+        if ([response count] > 0)
+        {
+            NSDictionary* userInfo = response[0];
+            DDUserEntity *newUser = [DDUserEntity dicToUserEntity:userInfo];
+            if (newUser) {
+                self.user=newUser;
+                self.nickName.text=newUser.nick;
+                self.realName.text=newUser.name;
+                [self.tableView reloadData];
+            }
+        }
+        else
+        {
+        }
+    }];
+       [self initData];
     
 
     // Do any additional setup after loading the view from its nib.
@@ -54,29 +77,30 @@
 
 -(void)initData
 {
-    __block NSString *departmentName = @" ";
-    if (self.user.departId) {
-         [[DDDatabaseUtil instance] getDepartmentFromID:self.user.departId completion:^(DDepartment *department) {
-             departmentName=department.title;
-             [self.tableView reloadData];
-         }];
+    UIImage* placeholder = [UIImage imageNamed:@"user_placeholder"];
+    [self.avatar sd_setImageWithURL:[NSURL URLWithString:self.user.avatar] placeholderImage:placeholder];
+    [self.avatar setClipsToBounds:YES];
+    [self.avatar.layer setCornerRadius:2.0];
+    [self.avatar setUserInteractionEnabled:YES];
+    if (![self.user.objID isEqualToString:TheRuntime.user.objID]) {
+        UIBarButtonItem* barButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"收藏" style:UIBarButtonItemStyleBordered target:self action:@selector(favThisContact)];
+        self.navigationItem.rightBarButtonItem=barButtonItem;
+
     }
-   
-    self.profileInfos = [NSMutableDictionary dictionaryWithCapacity:5];
-    [self.profileInfos setObject:[NSArray arrayWithObjects:@"职位", self.user.title?self.user.title:@" ", nil] forKey:@"1"];
-    [self.profileInfos setObject:[NSArray arrayWithObjects:@"部门", departmentName?departmentName:@" ", nil] forKey:@"2"];
-    [self.profileInfos setObject:[NSArray arrayWithObjects:@"手机号码", self.user.telphone?self.user.telphone:@" ", nil] forKey:@"3"];
-    [self.profileInfos setObject:[NSArray arrayWithObjects:@"生日", @"1990/12/19", nil] forKey:@"4"];
-    [self.profileInfos setObject:[NSArray arrayWithObjects:@"邮箱地址", self.user.email?self.user.email:@" ", nil] forKey:@"5"];
-    
-    UIBarButtonItem *item = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemSave target:self action:@selector(favThisContact)];
-    self.navigationItem.rightBarButtonItem=item;
     [self.tableView setContentInset:UIEdgeInsetsMake(-64, 0, 0, 0)];
-    
     self.conversationBtn.layer.masksToBounds = YES;
     self.conversationBtn.layer.cornerRadius = 4;
 }
-
+-(void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    [self.tabBarController.tabBar setHidden:YES];
+}
+-(void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    [self.tabBarController.tabBar setHidden:NO];
+}
 -(void)favThisContact
 {
     [ContactsModule favContact:self.user];
@@ -95,33 +119,43 @@
 //    if (indexPath.row == 0) {
 //        cell.textLabel.text=self.user.department;
 //    }
-    int index = indexPath.row+1;
-    NSString *key = [NSString stringWithFormat :@"%d",(index)];
-    NSArray *elementInfo = [self.profileInfos objectForKey:key];
-    UILabel *titleNameTab = [[UILabel alloc]initWithFrame:CGRectMake(13, 12, 87, 19)];
-    titleNameTab.text=[elementInfo objectAtIndex:0];
-    
-    UILabel *titleValueTab = [[UILabel alloc]initWithFrame:CGRectMake(101, 12, 219, 19)];
-    titleValueTab.text=[elementInfo objectAtIndex:1];
-    
-    // 设置cell上文本内容
-    [cell addSubview:titleNameTab];
-    [cell addSubview:titleValueTab];
+    switch (indexPath.row) {
+        case 0:
+            {
+                NSString *string = [NSString stringWithFormat:@"部门            %@",self.user.department];
+                [cell.textLabel setText:string];
+                cell.userInteractionEnabled = NO;
+                
+            }
+            break;
+        case 1:
+        {
+            NSString *string = [NSString stringWithFormat:@"手机号码     %@",self.user.telphone];
+            [cell.textLabel setText:string];
+        }
+            break;
+        case 2:
+        {
+            NSString *string = [NSString stringWithFormat:@"邮箱地址     %@",self.user.email];
+            [cell.textLabel setText:string];
+            cell.userInteractionEnabled = NO;
+        }
+            break;
+        default:
+            break;
+    }
     
     return cell;
 }
 -(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    int index = indexPath.row+1;
-    NSString *key = [NSString stringWithFormat :@"%d",(index)];
-    NSArray *elementInfo = [self.profileInfos objectForKey:key];
-    
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
     switch (indexPath.row) {
-        case 2:
-            [self callPhoneNum:elementInfo[1]];
+        case 1:
+            [self callPhoneNum:self.user.telphone];
             break;
-        case 4:
-            [self sendEmail:elementInfo[1]];
+        case 2:
+            [self sendEmail:self.user.email];
             break;
             
         default:
@@ -130,22 +164,36 @@
 }
 -(void)callPhoneNum:(NSString *)phoneNum
 {
+    if (!phoneNum) {
+        return;
+    }
     NSString *stringURL =[NSString stringWithFormat:@"tel:%@",phoneNum];
     NSURL *url = [NSURL URLWithString:stringURL];
     [[UIApplication sharedApplication] openURL:url];
 }
 -(void)sendEmail:(NSString *)address
 {
+    if (!address.length) {
+        return;
+    }
     NSString *stringURL =[NSString stringWithFormat:@"mailto:%@",address];
     NSURL *url = [NSURL URLWithString:stringURL];
     [[UIApplication sharedApplication] openURL:url];
 }
 -(IBAction)startConversation:(id)sender
 {
-     DDSessionEntity* session = [[DDSessionEntity alloc] initWithSessionID:self.user.userId type:SESSIONTYPE_SINGLE];
-    
+     DDSessionEntity* session = [[DDSessionEntity alloc] initWithSessionID:self.user.objID type:SESSIONTYPE_SINGLE];
+    [session setSessionName:self.user.nick];
     [[ChattingMainViewController shareInstance] showChattingContentForSession:session];
-    [self.navigationController pushViewController:[ChattingMainViewController shareInstance] animated:YES];
+    NSLog(@"%@...",TheAppDel.nv);
+    if ([[self.navigationController viewControllers] containsObject:[ChattingMainViewController shareInstance]]) {
+         [self.navigationController popToViewController:[ChattingMainViewController shareInstance] animated:YES];
+    }else
+    {
+        [self.navigationController pushViewController:[ChattingMainViewController shareInstance] animated:YES];
+
+    }
+   
     
 }
 

@@ -15,4 +15,5 @@
 + (instancetype)shareInstance;
 -(void)moveSessionToTop:(NSString *)sesstionID;
 - (void)showLinking;
+-(void)setToolbarBadge;
 @end

@@ -18,7 +18,7 @@
  */
 - (int)requestTimeOutTimeInterval
 {
-    return 2;
+    return TimeOutTimeInterval;
 }
 
 /**
@@ -48,7 +48,7 @@
  */
 - (int)requestCommendID
 {
-    return CMD_ID_GROUP_JOIN_GROUP_REQ;
+    return CMD_ID_GROUP_CHANGE_GROUP_REQ;
 }
 
 /**
@@ -58,7 +58,7 @@
  */
 - (int)responseCommendID
 {
-    return CMD_ID_GROUP_JOIN_GROUP_RES;
+    return CMD_ID_GROUP_CHANGE_GROUP_RES;
 }
 
 /**
@@ -75,28 +75,19 @@
         DDGroupEntity *groupEntity = nil;
         if (result != 0)
         {
-            //log4CInfo(@"change group member failure");
             return groupEntity;
         }
         NSString *groupId = [bodyData readUTF];
         uint32_t userCnt = [bodyData readInt];
-        groupEntity =  [[DDGroupModule instance] getGroupByGId:groupId];
-//        if (!groupEntity)
-//        {
-//            [groupModule tcpGetUnkownGroupInfo:groupId];
-//        }
-        if (groupEntity) {
+        groupEntity =  [[DDGroupModule instance] getGroupByGId:[NSString stringWithFormat:@"%@",groupId]];
             for (uint32_t i = 0; i < userCnt; i++) {
                 NSString* userId = [bodyData readUTF];
                 if (![groupEntity.groupUserIds containsObject:userId]) {
                     [groupEntity.groupUserIds addObject:userId];
                     [groupEntity addFixOrderGroupUserIDS:userId];
                 }
-                //log4CInfo(@"group add member success,member userID:%@",userId);
             }
-        }
         
-        DDLog(@"result: %d, goupId: %@", result, groupId);
         return groupEntity;
         
     };
@@ -115,9 +106,9 @@
         NSArray* array = (NSArray*)object;
         NSString* groupId = array[0];
         NSArray* userList = array[1];
-        int isAdd=[array[2] intValue];
+        int changeType=0;
         DDDataOutputStream *dataout = [[DDDataOutputStream alloc] init];
-        uint32_t totalLen = IM_PDU_HEADER_LEN + 4 + strLen(groupId) + 4+4;
+        uint32_t totalLen = IM_PDU_HEADER_LEN + 4 + strLen(groupId) + 8;
         
         NSUInteger userCnt = [userList count];
         for (NSUInteger i = 0; i < userCnt; i++) {
@@ -125,16 +116,16 @@
             totalLen += 4 + strLen(userId);
         }
         
-        [dataout writeInt:totalLen];
-        [dataout writeTcpProtocolHeader:MODULE_ID_GROUP cId:CMD_ID_GROUP_JOIN_GROUP_REQ seqNo:seqNo];
+        [dataout writeInt:0];
+        [dataout writeTcpProtocolHeader:MODULE_ID_GROUP cId:CMD_ID_GROUP_CHANGE_GROUP_REQ seqNo:seqNo];
         [dataout writeUTF:groupId];
-        [dataout writeInt:isAdd];
+        [dataout writeInt:changeType];
         [dataout writeInt:(uint32_t)userCnt];
+        [dataout writeDataCount];
         for (NSUInteger i = 0; i < userCnt; i++) {
             NSString *userId = [userList objectAtIndex:i];
             [dataout writeUTF:userId];
         }
-        //log4CInfo(@"serviceID:%i cmdID:%i --> change group member group ID:%@",MODULE_ID_GROUP,CMD_ID_GROUP_JOIN_GROUP_REQ,groupId);
         return [dataout toByteArray];
     };
     return package;

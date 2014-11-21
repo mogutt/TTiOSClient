@@ -14,7 +14,6 @@
 - (int)intValueForKey:(id)key;
 - (double)doubleValueForKey:(id)key;
 - (NSString*)stringValueForKey:(id)key;
-- (NSString*)unescapeStringForKey:(id)key;
 
 @end
 

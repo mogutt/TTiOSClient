@@ -70,23 +70,23 @@
     
     cDataLen = 0;
     
-	_receiveLock = nil;
-	_sendLock = nil;
+    _receiveLock = nil;
+    _sendLock = nil;
     
     [_inStream close];
-	[_inStream removeFromRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
-	_inStream = nil;
+    [_inStream removeFromRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
+    _inStream = nil;
     
-	[_outStream close];
-	[_outStream removeFromRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
-	_outStream = nil;
+    [_outStream close];
+    [_outStream removeFromRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
+    _outStream = nil;
     
-	_receiveBuffer = nil;
-	_sendBuffers = nil;
-	_lastSendBuffer = nil;
+    _receiveBuffer = nil;
+    _sendBuffers = nil;
+    _lastSendBuffer = nil;
     
     [DDNotificationHelp postNotification:DDNotificationTcpLinkDisconnect userInfo:nil object:nil];
-
+    
 }
 
 -(void)writeToSocket:(NSMutableData *)data{
@@ -137,25 +137,25 @@
 {
     switch(eventCode) {
         case NSStreamEventNone:
-			DDLog(@"Event type: EventNone");
-			break;
+            DDLog(@"Event type: EventNone");
+            break;
         case NSStreamEventOpenCompleted:
-			[self p_handleConntectOpenCompletedStream:aStream];
-			break;
-		case NSStreamEventHasSpaceAvailable:          //发送数据
-			DDLog(@"Event type: EventHasSpaceAvailable");
+            [self p_handleConntectOpenCompletedStream:aStream];
+            break;
+        case NSStreamEventHasSpaceAvailable:          //发送数据
+            DDLog(@"Event type: EventHasSpaceAvailable");
             [self p_handleEventHasSpaceAvailableStream:aStream];
             break;
-		case NSStreamEventErrorOccurred:
-			DDLog(@"Event type: EventErrorOccured");
-			[self p_handleEventErrorOccurredStream:aStream];
-			break;
-		case NSStreamEventEndEncountered:
-			DDLog(@"Event type: EventEndOccured");
-			[self p_handleEventEndEncounteredStream:aStream];
-			break;
+        case NSStreamEventErrorOccurred:
+            DDLog(@"Event type: EventErrorOccured");
+            [self p_handleEventErrorOccurredStream:aStream];
+            break;
+        case NSStreamEventEndEncountered:
+            DDLog(@"Event type: EventEndOccured");
+            [self p_handleEventEndEncounteredStream:aStream];
+            break;
         case NSStreamEventHasBytesAvailable:
-			DDLog(@"Event type: EventHasBytesAvailable");
+            DDLog(@"Event type: EventHasBytesAvailable");
             [self p_handleEventHasBytesAvailableStream:aStream];
             break;
     }
@@ -251,7 +251,7 @@
 {
     DDLog(@"handle eventEndEncountered");
     cDataLen = 0;
-
+    
 }
 
 - (void)p_handleEventHasBytesAvailableStream:(NSStream *)aStream
@@ -267,14 +267,14 @@
     
     if (len > 0) {
         
-       
+        
         [_receiveLock lock];
         [_receiveBuffer appendBytes:(const void *)buf length:len];
         
         while ([_receiveBuffer length] >= IM_PDU_HEADER_LEN) {
             NSRange range = NSMakeRange(0, IM_PDU_HEADER_LEN);
-//            [[DDAPISchedule instance] receiveServerData:_receiveBuffer];
-
+            //            [[DDAPISchedule instance] receiveServerData:_receiveBuffer];
+            
             NSData *headerData = [_receiveBuffer subdataWithRange:range];
             
             DDDataInputStream *inputData = [DDDataInputStream dataInputStreamWithData:headerData];
@@ -290,7 +290,7 @@
             tcpHeader.commandId = [inputData readShort];
             tcpHeader.version = [inputData readShort];
             tcpHeader.reserved = [inputData readShort];
-        
+            
             DDLog(@"receive a packet serviceId=%d, commandId=%d", tcpHeader.serviceId, tcpHeader.commandId);
             
             range = NSMakeRange(IM_PDU_HEADER_LEN, pduLen - IM_PDU_HEADER_LEN);
@@ -298,25 +298,13 @@
             
             NSString *string = [[NSString alloc] initWithData:payloadData encoding:NSUTF8StringEncoding];
             NSLog(@"%@----->",string);
-            
-            //
+
             uint32_t remainLen = (int)[_receiveBuffer length] - pduLen;
             range = NSMakeRange(pduLen, remainLen);
             NSData *remainData = [_receiveBuffer subdataWithRange:range];
             [_receiveBuffer setData:remainData];
             ServerDataType dataType = DDMakeServerDataType(tcpHeader.serviceId, tcpHeader.commandId, tcpHeader.reserved);
             [[DDAPISchedule instance] receiveServerData:payloadData forDataType:dataType];
-            
-//            }
-//            DataInputStream *payloadInputData = [DataInputStream dataInputStreamWithData:payloadData];
-//            
-//            // 先更新_receiveBuffer, 在处理数据包
-//            uint32_t remainLen = (int)[_receiveBuffer length] - pduLen;
-//            range = NSMakeRange(pduLen, remainLen);
-//            NSData *remainData = [_receiveBuffer subdataWithRange:range];
-//            [_receiveBuffer setData:remainData];
-//            DDDispatchTask* task = [[DDDispatchTask alloc] initDispatchTask:tcpHeader body:payloadInputData];
-//            [[DDLogic instance] pushTask:task delegate:nil];
             
             //收到心跳
             [DDNotificationHelp postNotification:DDNotificationServerHeartBeat userInfo:nil object:nil];
@@ -328,6 +316,6 @@
     else {
         DDLog(@"No buffer!");
     }
-
+    
 }
 @end

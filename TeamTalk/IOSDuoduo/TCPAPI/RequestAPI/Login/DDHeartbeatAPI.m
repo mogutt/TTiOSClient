@@ -79,8 +79,7 @@
     Package package = (id)^(id object,UInt32 seqNo)
     {
         DDDataOutputStream *dataout = [[DDDataOutputStream alloc] init];
-        uint32_t totalLen = 16;
-        [dataout writeInt:totalLen];
+        [dataout writeInt:IM_PDU_HEADER_LEN];
         [dataout writeTcpProtocolHeader:DDHEARTBEAT_SID cId:REQ_CID seqNo:seqNo];
         return [dataout toByteArray];
     };

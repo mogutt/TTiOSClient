@@ -31,6 +31,7 @@
 //将一个 NSData byte数组写入输出流中，先写入高字节。
 - (void)writeBytes:(NSData *)v;
 
+-(void)writeDataCount;
 //将此转换为 byte 序列。
 - (NSMutableData *)toByteArray;
 

@@ -17,7 +17,7 @@
  */
 - (int)requestTimeOutTimeInterval
 {
-    return 5;
+    return TimeOutTimeInterval;
 }
 
 /**
@@ -84,7 +84,7 @@
             NSString *groupName = [bodyData readUTF];
             uint32_t userCnt = [bodyData readInt];
             group = [[DDGroupEntity alloc] init];
-            group.groupId = groupId;
+            group.objID = groupId;
             group.name = groupName;
             group.groupUserIds = [[NSMutableArray alloc] init];
             
@@ -123,7 +123,7 @@
             totalLen += 4 + strLen(userId);
         }
         
-        [dataout writeInt:totalLen];
+        [dataout writeInt:0];
         [dataout writeTcpProtocolHeader:MODULE_ID_GROUP
                                     cId:CMD_ID_GROUP_CREATE_TMP_GROUP_REQ
                                   seqNo:seqNo];
@@ -134,6 +134,7 @@
             NSString *userId = [groupUserList objectAtIndex:i];
             [dataout writeUTF:userId];
         }
+        [dataout writeDataCount];
         return [dataout toByteArray];
     };
     return package;

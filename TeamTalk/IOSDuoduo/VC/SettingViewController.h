@@ -8,6 +8,8 @@
 
 #import <UIKit/UIKit.h>
 
-@interface SettingViewController : UIViewController<UITableViewDataSource,UITableViewDelegate,UIAlertViewDelegate>
-@property(weak)IBOutlet UITableView *tableView;
+@interface SettingViewController : UIViewController<UIAlertViewDelegate,UITableViewDataSource,UITableViewDelegate>
+@property (nonatomic,weak)IBOutlet UITableView* tableView;
+-(IBAction)clearCache:(id)sender;
+-(IBAction)logout:(id)sender;
 @end

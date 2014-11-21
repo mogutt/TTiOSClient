@@ -93,13 +93,11 @@
 {
     Package package = (id)^(id object,uint32_t seqNo)
     {
-        int type = [object intValue];
-        
         DDDataOutputStream *dataout = [[DDDataOutputStream alloc] init];
         uint32_t totalLen = 12;
-        [dataout writeInt:totalLen];
+        [dataout writeInt:0];
         [dataout writeTcpProtocolHeader:DDSERVICE_LOGIN cId:DDCMD_LOGIN_REQ_MSGSERVER seqNo:seqNo];
-        //[dataout writeInt:type];
+        [dataout writeDataCount];
         return [dataout toByteArray];
     };
     return package;

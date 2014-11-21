@@ -9,6 +9,7 @@
 #import "ChattingMainViewController.h"
 #import "ChatUtilityViewController.h"
 #import "std.h"
+#import "PhotosCache.h"
 #import "DDGroupModule.h"
 #import "DDMessageSendManager.h"
 #import "DDGroupMsgReadACKAPI.h"
@@ -16,7 +17,6 @@
 #import "DDChatTextCell.h"
 #import "DDChatVoiceCell.h"
 #import "DDChatImageCell.h"
-#import "QuickReplyView.h"
 #import "DDChattingEditViewController.h"
 #import "DDPromptCell.h"
 #import "UIView+DDAddition.h"
@@ -29,7 +29,9 @@
 #import "NSDictionary+JSON.h"
 #import "EmotionsModule.h"
 #import "RuntimeStatus.h"
-
+#import "RecentUsersViewController.h"
+#import "PublicProfileViewControll.h"
+#import "UnAckMessageManager.h"
 typedef NS_ENUM(NSUInteger, DDBottomShowComponent)
 {
     DDInputViewUp                       = 1,
@@ -74,7 +76,7 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
 @property(nonatomic,strong)UIActivityIndicatorView *activity;
 @property(assign)PanelStatus panelStatus;
 @property(strong)NSString *chatObjectID;
-@property(strong)QuickReplyView *replyView;
+@property(strong) UIButton *titleBtn ;
 - (void)recentViewController;
 
 - (UITableViewCell*)p_textCell_tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath message:(DDMessageEntity*)message;
@@ -83,7 +85,6 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
 - (UITableViewCell*)p_commodityCell_tableView:(UITableView* )tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath message:(DDMessageEntity*)commodity;
 
 - (void)n_receiveMessage:(NSNotification*)notification;
-- (void)n_receiveUnreadMessageUpdateNotification:(NSNotification*)notification;
 - (void)n_receiveStartLoginNotification:(NSNotification*)notification;
 - (void)n_receiveLoginSuccessNotification:(NSNotification*)notification;
 - (void)n_receiveLoginFailureNotification:(NSNotification*)notification;
@@ -111,8 +112,6 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
     UIButton *_recordButton;
     DDBottomShowComponent _bottomShowComponent;
     float _inputViewY;
-    NSString* _goodID;
-    NSString* _shopID;
     int _type;
 }
 +(instancetype )shareInstance
@@ -135,50 +134,62 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
     return YES;
 }
 
--(void)sendImageMessage:(Photo *)photo
+-(void)sendImageMessage:(Photo *)photo Image:(UIImage *)image
 {
     NSDictionary* messageContentDic = @{DD_IMAGE_LOCAL_KEY:photo.localPath};
     NSString* messageContent = [messageContentDic jsonString];
 
     DDMessageEntity *message = [DDMessageEntity makeMessage:messageContent Module:self.module MsgType:DDMessageTypeImage];
-    [self.chatInputView.textView setText:nil];
-    [self.tableView reloadData];
+    [self scrollToBottomAnimated:YES];
+    NSData *photoData = UIImagePNGRepresentation(image);
+    [[PhotosCache sharedPhotoCache] storePhoto:photoData forKey:photo.localPath toDisk:YES];
+    //[self.chatInputView.textView setText:@""];
     [[DDDatabaseUtil instance] insertMessages:@[message] success:^{
         DDLog(@"消息插入DB成功");
         
     } failure:^(NSString *errorDescripe) {
         DDLog(@"消息插入DB失败");
     }];
-    [[DDSendPhotoMessageAPI sharedPhotoCache] uploadImage:photo.localPath success:^(NSString *imageURL) {
+    photo=nil;
+    [[DDSendPhotoMessageAPI sharedPhotoCache] uploadImage:messageContentDic[DD_IMAGE_LOCAL_KEY] success:^(NSString *imageURL) {
+         [self scrollToBottomAnimated:YES];
         NSDictionary* tempMessageContent = [NSDictionary initWithJsonString:message.msgContent];
         NSMutableDictionary* mutalMessageContent = [[NSMutableDictionary alloc] initWithDictionary:tempMessageContent];
         [mutalMessageContent setValue:imageURL forKey:DD_IMAGE_URL_KEY];
         NSString* messageContent = [mutalMessageContent jsonString];
         message.msgContent = messageContent;
         [self sendMessage:imageURL messageEntity:message];
+        [[DDDatabaseUtil instance] updateMessageForMessage:message completion:^(BOOL result) {
+        }];
+
     } failure:^(id error) {
         message.state = DDMessageSendFailure;
         //刷新DB
         [[DDDatabaseUtil instance] updateMessageForMessage:message completion:^(BOOL result) {
             if (result)
             {
-                [self.tableView reloadData];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [_tableView reloadData];
+                });
             }
         }];
         
     }];
-    
 }
 - (void)textViewEnterSend
 {
     //发送消息
     NSString* text = [self.chatInputView.textView text];
-    if ([text length] == 0)
+    
+    NSString* parten = @"\\s";
+    NSRegularExpression* reg = [NSRegularExpression regularExpressionWithPattern:parten options:NSRegularExpressionCaseInsensitive error:nil];
+    NSString* checkoutText = [reg stringByReplacingMatchesInString:text options:NSMatchingReportProgress range:NSMakeRange(0, [text length]) withTemplate:@""];
+    if ([checkoutText length] == 0)
     {
         return;
     }
-      DDMessageType msgtype = self.module.sessionEntity.sessionType == SESSIONTYPE_SINGLE?DDMessageTypeText:DDGroup_Message_TypeText;
-    DDMessageEntity *message = [DDMessageEntity makeMessage:text Module:self.module MsgType:msgtype];
+    DDMessageContentType msgContentType = DDMessageTypeText;
+    DDMessageEntity *message = [DDMessageEntity makeMessage:text Module:self.module MsgType:msgContentType];
     [self.chatInputView.textView setText:nil];
     [[DDDatabaseUtil instance] insertMessages:@[message] success:^{
         DDLog(@"消息插入DB成功");
@@ -186,40 +197,45 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
         DDLog(@"消息插入DB失败");
     }];
     [self sendMessage:text messageEntity:message];
+    [self scrollToBottomAnimated:YES];
 }
 
 -(void)sendMessage:(NSString *)msg messageEntity:(DDMessageEntity *)message
 {
-  
-    BOOL isGroup = self.module.sessionEntity.sessionType == SESSIONTYPE_SINGLE?NO:YES;
-    [[DDMessageSendManager instance] sendMessage:msg isGroup:isGroup forSessionID:self.module.sessionEntity.sessionID  completion:^(DDMessageEntity* theMessage,NSError *error) {
-        if (error)
-        {
-            DDLog(@"发送消息失败");
-            //刷新消息所在行
-            message.state = DDMessageSendFailure;
-            [[DDDatabaseUtil instance] updateMessageForMessage:message completion:^(BOOL result) {
-                if (result)
-                {
-                    [self.tableView reloadData];
-                    [self scrollToBottomAnimated:YES];
-                }
-            }];
-        }
-        else
-        {
-            //刷新消息所在行
-            message.state = DDmessageSendSuccess;
-            //刷新DB
-            [[DDDatabaseUtil instance] updateMessageForMessage:message completion:^(BOOL result) {
-                if (result)
-                {
-                    [self.tableView reloadData];
-                    [self scrollToBottomAnimated:YES];
-                }
-            }];
-        }
-    }];
+    if (message) {
+        BOOL isGroup = self.module.sessionEntity.sessionType == SESSIONTYPE_SINGLE?NO:YES;
+        [[DDMessageSendManager instance] sendMessage:message isGroup:isGroup forSessionID:self.module.sessionEntity.sessionID  completion:^(DDMessageEntity* theMessage,NSError *error) {
+            if (error)
+            {
+                [[DDDatabaseUtil instance] updateMessageForMessage:theMessage completion:^(BOOL result) {
+                    if (result)
+                    {
+                        
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            [self.tableView reloadData];
+                            [self scrollToBottomAnimated:YES];
+                            
+                        });
+                    }
+                }];
+            }
+            else
+            {
+                theMessage.state = DDmessageSendSuccess;
+                [[DDDatabaseUtil instance] updateMessageForMessage:theMessage completion:^(BOOL result) {
+                    if (result)
+                    {
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            [self.tableView reloadData];
+                            [self scrollToBottomAnimated:YES];
+                            
+                        });
+                    }
+                }];
+            }
+        }];
+
+    }
 }
 //--------------------------------------------------------------------------------------------
 #pragma mark -
@@ -250,12 +266,20 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
     }
     [muData appendBytes:ch length:4];
     [muData appendData:data];
-     DDMessageType msgtype = self.module.sessionEntity.sessionType == SESSIONTYPE_SINGLE?DDMessageTypeVoice:DDGroup_MessageTypeVoice;
-    DDMessageEntity* message = [DDMessageEntity makeMessage:filePath Module:self.module MsgType:msgtype];
+     DDMessageContentType msgContentType = DDMessageTypeVoice;
+    DDMessageEntity* message = [DDMessageEntity makeMessage:filePath Module:self.module MsgType:msgContentType];
+    BOOL isGroup = self.module.sessionEntity.sessionType == SESSIONTYPE_SINGLE?NO:YES;
+//    if (isGroup) {
+//        message.msgType=MSG_TYPE_GROUP_AUDIO;
+//    }else
+//    {
+//        message.msgType = MSG_TYPE_AUDIO;
+//    }
     [message.info setObject:@(length) forKey:VOICE_LENGTH];
     [message.info setObject:@(1) forKey:DDVOICE_PLAYED];
     dispatch_async(dispatch_get_main_queue(), ^{
         [self.tableView reloadData];
+        [self scrollToBottomAnimated:YES];
         [[DDDatabaseUtil instance] insertMessages:@[message] success:^{
             NSLog(@"消息插入DB成功");
         } failure:^(NSString *errorDescripe) {
@@ -264,7 +288,7 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
         
     });
     
-    [[DDMessageSendManager instance] sendVoiceMessage:muData filePath:filePath forSessionID:self.module.sessionEntity.sessionID completion:^(DDMessageEntity *theMessage, NSError *error) {
+    [[DDMessageSendManager instance] sendVoiceMessage:muData filePath:filePath forSessionID:self.module.sessionEntity.sessionID isGroup:isGroup completion:^(DDMessageEntity *theMessage, NSError *error) {
         if (!error)
         {
             DDLog(@"发送语音消息成功");
@@ -273,7 +297,10 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
             [[DDDatabaseUtil instance] updateMessageForMessage:message completion:^(BOOL result) {
                 if (result)
                 {
-                    [self.tableView reloadData];
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [self.tableView reloadData];
+                    });
+                    
                 }
             }];
         }
@@ -284,7 +311,9 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
             [[DDDatabaseUtil instance] updateMessageForMessage:message completion:^(BOOL result) {
                 if (result)
                 {
-                    [self.tableView reloadData];
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [self.tableView reloadData];
+                    });
                 }
             }];
             
@@ -301,6 +330,12 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
     self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
     if (self) {
         // Custom initialization
+        self.titleBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+        self.titleBtn.frame=CGRectMake(0, 0, 150, 40);
+        [self.titleBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        [self.titleBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateHighlighted];
+        [self.titleBtn addTarget:self action:@selector(titleTap:) forControlEvents:UIControlEventTouchUpInside];
+        [self.titleBtn.titleLabel setTextAlignment:NSTextAlignmentLeft];
     }
     return self;
 }
@@ -309,10 +344,6 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(n_receiveMessage:)
                                                  name:DDNotificationReceiveMessage
-                                               object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(n_receiveUnreadMessageUpdateNotification:)
-                                                 name:DDNotificationUpdateUnReadMessage
                                                object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(n_receiveStartLoginNotification:) name:DDNotificationStartLogin object:nil];
@@ -342,6 +373,10 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    
+    UIImage* image = [UIImage imageNamed:@"navigationbar_back"];
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithImage:image style:UIBarButtonItemStylePlain target:self action:@selector(p_popViewController)];
+    
     [self notificationCenter];
     [self initialInput];
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self
@@ -354,23 +389,28 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
     [self.tableView addGestureRecognizer:pan];
     self.tableView.delegate=self;
     self.tableView.dataSource=self;
+    [self.tableView setContentInset:UIEdgeInsetsMake(0, 0, 0, 0)];
     [self scrollToBottomAnimated:NO];
     
     _originalTableViewContentInset = self.tableView.contentInset;
     
      self.activity = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
      self.activity.frame=CGRectMake(self.view.frame.size.width/2, 70, 20, 20);
+    
     [self.view addSubview:self.activity];
-    UIBarButtonItem *item = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemEdit target:self action:@selector(Edit:)];
+    UIBarButtonItem* item = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"contacts"] style:UIBarButtonItemStyleBordered target:self action:@selector(Edit:)];
     self.navigationItem.rightBarButtonItem=item;
     [self.module addObserver:self forKeyPath:@"showingMessages" options:NSKeyValueObservingOptionOld|NSKeyValueObservingOptionNew context:NULL];
     [self.module addObserver:self forKeyPath:@"sessionEntity.sessionID" options:NSKeyValueObservingOptionNew|NSKeyValueObservingOptionOld context:NULL];
-    self.replyView = [QuickReplyView new];
-    [self.view addSubview:self.replyView];
-
-    
+    [self.navigationItem.titleView setUserInteractionEnabled:YES];
+    self.navigationItem.titleView=self.titleBtn;
+    self.view.backgroundColor=[UIColor whiteColor];
+     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(n_receiveUnreadMessageUpdateNotification:) name:DDNotificationUpdateUnReadMessage object:nil];
 }
-
+-(void)setThisViewTitle:(NSString *)title
+{
+     [self.titleBtn setTitle:title forState:UIControlStateNormal];
+}
 -(IBAction)Edit:(id)sender
 {
     DDChattingEditViewController *chattingedit = [DDChattingEditViewController new];
@@ -394,16 +434,13 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
 - (void)scrollToBottomAnimated:(BOOL)animated
 {
     NSInteger rows = [self.tableView numberOfRowsInSection:0];
-    
     if(rows > 0) {
         [self.tableView scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:rows - 1 inSection:0]
                               atScrollPosition:UITableViewScrollPositionBottom
                                       animated:animated];
-        if(self.tableView.contentOffset.y < -10)
-        {
-            //[self.tableView setContentOffset:CGPointMake(0, -10)];
-        }
+       
     }
+   
 }
 
 - (ChattingModule*)module
@@ -430,21 +467,22 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
     [self.tableView reloadData];
     [self.chatInputView.textView setText:nil];
     [self.tabBarController.tabBar setHidden:YES];
+    [self p_hideBottomComponent];
 }
 
 - (void)viewDidAppear:(BOOL)animated
 {
     [super viewDidAppear:animated];
+    [[UIApplication sharedApplication] setStatusBarStyle:UIStatusBarStyleLightContent animated:animated];
 
 }
 
 - (void)viewWillDisappear:(BOOL)animated
 {
     [super viewWillDisappear:animated];
-    [self.chatInputView.textView resignFirstResponder];
-    [self p_hideBottomComponent];
     [self.tabBarController.tabBar setHidden:NO];
-  
+    [self p_hideBottomComponent];
+    
 }
 
 - (void)viewDidDisappear:(BOOL)animated
@@ -520,7 +558,6 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
         height = 30;
     }
     return height+10;
-//    return 84;
 }
 
 - (UITableViewCell*)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
@@ -531,13 +568,13 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
     if ([object isKindOfClass:[DDMessageEntity class]])
     {
         DDMessageEntity* message = (DDMessageEntity*)object;
-        if (message.msgType == DDMessageTypeText || message.msgType == DDGroup_Message_TypeText ) {
+        if (message.msgContentType == DDMessageTypeText ) {
             cell = [self p_textCell_tableView:tableView cellForRowAtIndexPath:indexPath message:message];
-        }else if (message.msgType == DDMessageTypeVoice || message.msgType == DDGroup_MessageTypeVoice)
+        }else if (message.msgContentType == DDMessageTypeVoice || message.msgContentType==DDGroup_MessageTypeVoice)
         {
              cell = [self p_voiceCell_tableView:tableView cellForRowAtIndexPath:indexPath message:message];
         }
-        else if(message.msgType == DDMessageTypeImage)
+        else if(message.msgContentType == DDMessageTypeImage)
         {
              cell = [self p_imageCell_tableView:tableView cellForRowAtIndexPath:indexPath message:message];
         }
@@ -570,12 +607,16 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
                  loadingHistory = NO;
                  if ([sessionID isEqualToString:self.module.sessionEntity.sessionID])
                  {
-                        [_tableView reloadData];
+                     dispatch_async(dispatch_get_main_queue(), ^{
+                         [_tableView reloadData];
+                     });
                       [self.activity stopAnimating];
                      if ([self.module.showingMessages count] > addCount)
                      {
-                        
-                         [_tableView scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:addCount inSection:0] atScrollPosition:UITableViewScrollPositionTop animated:NO];
+                         dispatch_async(dispatch_get_main_queue(), ^{
+                          [_tableView scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:addCount inSection:0] atScrollPosition:UITableViewScrollPositionTop animated:NO];
+                     });
+                         
                      }
                  }
              }];
@@ -585,49 +626,24 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
 #pragma mark PublicAPI
 - (void)showChattingContentForSession:(DDSessionEntity*)session
 {
-    self.title = @"正在联系用户";
     [self.module.showingMessages removeAllObjects];
     self.module.sessionEntity = nil;
     [self p_unableChatFunction];
     [self p_enableChatFunction];
-    [self.activity startAnimating];
-    if (![session.sessionID isEqualToString:self.module.sessionEntity.sessionID])
-    {
-        [self.module.showingMessages removeAllObjects];
-        self.module.sessionEntity = session;
-    }
-    [self setTitle:session.name];
-    NSUInteger unreadMessageCount = [[DDMessageModule shareInstance] getUnreadMessageCountForSessionID:session.sessionID];
-    if (unreadMessageCount > 0)
-    {
+    [self.module.showingMessages removeAllObjects];
+    self.module.sessionEntity = session;
+    [self setThisViewTitle:session.name];
     NSArray* unreadMessages = [[DDMessageModule shareInstance]popAllUnreadMessagesForSessionID:session.sessionID];
-    [[DDDatabaseUtil instance] insertMessages:unreadMessages success:^{
-        DDSendMessageReadACKAPI* sendMessageReadACKAPI = [[DDSendMessageReadACKAPI alloc] init];
-        [sendMessageReadACKAPI requestWithObject:session.sessionID Completion:nil];
-        
-        } failure:^(NSString *errorDescripe) {
-                    
-                }];
-                [self.module addShowMessages:unreadMessages];
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [_tableView reloadData];
-                    [self scrollToBottomAnimated:NO];
-                });
-            }
-            else
+    [self.module.showingMessages addObjectsFromArray:unreadMessages];
+    [self.module loadMoreHistoryCompletion:^(NSUInteger addCount,NSError *error) {
+            [_tableView reloadData];
+            if (addCount < DD_PAGE_ITEM_COUNT)
             {
-                [self.module loadMoreHistoryCompletion:^(NSUInteger addCount,NSError *error) {
-                    [_tableView reloadData];
-                    if (addCount < DD_PAGE_ITEM_COUNT)
-                    {
-                        [self.activity stopAnimating];
-                    }
-                    else
-                    {
-                        [self scrollToBottomAnimated:NO];
-                    }
-                }];
+                [self.activity stopAnimating];
             }
+            [self scrollToBottomAnimated:NO];
+    }];
+
 }
 #pragma mark - Text view delegatef
 
@@ -646,7 +662,7 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
     {
         cell = [[DDChatTextCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier];
     }
-    NSString* myUserID = [RuntimeStatus instance].user.userId;
+    NSString* myUserID = [RuntimeStatus instance].user.objID;
     if ([message.senderId isEqualToString:myUserID])
     {
         [cell setLocation:DDBubbleRight];
@@ -655,12 +671,18 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
     {
         [cell setLocation:DDBubbleLeft];
     }
+    
+    if (![[UnAckMessageManager instance] isInUnAckQueue:message] && message.state == DDMessageSending && [message isSendBySelf]) {
+        message.state=DDMessageSendFailure;
+    }
+    [[DDDatabaseUtil instance] updateMessageForMessage:message completion:^(BOOL result) {
+
+    }];
     [cell setContent:message];
     __weak DDChatTextCell* weakCell = (DDChatTextCell*)cell;
     cell.sendAgain = ^{
         [weakCell showSending];
         [weakCell sendTextAgain:message];
-    
     };
     
     return cell;
@@ -674,7 +696,7 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
     {
         cell = [[DDChatVoiceCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier];
     }
-    NSString* myUserID = [RuntimeStatus instance].user.userId;
+    NSString* myUserID = [RuntimeStatus instance].user.objID;
     if ([message.senderId isEqualToString:myUserID])
     {
         [cell setLocation:DDBubbleRight];
@@ -749,7 +771,7 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
     {
         cell = [[DDChatImageCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier];
     }
-    NSString* myUserID =[RuntimeStatus instance].user.userId;
+    NSString* myUserID =[RuntimeStatus instance].user.objID;
     if ([message.senderId isEqualToString:myUserID])
     {
         [cell setLocation:DDBubbleRight];
@@ -776,111 +798,21 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
     return cell;
 }
 
-- (void)n_receiveMessage:(NSNotification*)notification
-{
-    if (![self.navigationController.topViewController isEqual:self])
-    {
-        //当前不是聊天界面直接返回
-        return;
-    }
-    DDMessageEntity* message = [notification object];
-    [AnalysisImage analysisImage:message Block:^(NSMutableArray *array) {
-        for (DDMessageEntity *msg in array) {
-            NSString *msgID= nil;
-            if (message.msgType <5) {
-                msgID = msg.sessionId;
-            }else
-            {
-                msgID =msg.toUserID;
-            }
-            if ([msgID isEqualToString:self.module.sessionEntity.sessionID])
-            {
-                //显示消息
-                [[DDSundriesCenter instance] pushTaskToParallelQueue:^{
-                    msg.state=DDmessageSendSuccess;
-                    [self.module addShowMessage:msg];
-                    [self.module updateSessionUpdateTime:msg.msgTime];
-                    [[DDDatabaseUtil instance] updateMessageForMessage:msg completion:^(BOOL result) {
-                        
-                    }];
-                    [[DDMessageModule shareInstance] clearUnreadMessagesForSessionID:self.module.sessionEntity.sessionID];
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        [self.tableView reloadData];
-                        [self scrollToBottomAnimated:YES];
-                    });
-                    if (message.msgType >5) {
-                        DDGroupMsgReadACKAPI *groupACK = [[DDGroupMsgReadACKAPI alloc] init];
-                        [groupACK requestWithObject:self.module.sessionEntity.sessionID Completion:^(id response, NSError *error) {
-                            
-                        }];
-                    }else
-                    {
-                        DDSendMessageReadACKAPI* readACKAPI = [[DDSendMessageReadACKAPI alloc] init];
-                        [readACKAPI requestWithObject:self.module.sessionEntity.sessionID Completion:^(id response, NSError *error) {
-                            
-                        }];
-                    }
-                   
-                }];
-            }
-            else
-            {
-                  [self.replyView setDescriptionInfo:msg];
-//                UIImage* image = [UIImage imageNamed:@"dd_has_unread_message"];
-//                [_recentButton setImage:image forState:UIControlStateNormal];
-//                //TODO:右上角显示有未读消息
-            }
-        }
-    }];
-    
-}
-
-- (void)n_receiveUnreadMessageUpdateNotification:(NSNotification*)notification
-{
-    if (![self.navigationController.topViewController isEqual:self])
-    {
-        //当前不是聊天界面直接返回
-        return;
-    }
-    NSString* userID = [notification object];
-    NSUInteger oldMessageCount = [self.module.showingMessages count];
-    NSArray* unreadMessage = [[DDMessageModule shareInstance] popAllUnreadMessagesForSessionID:userID];
-    [self.module.showingMessages addObjectsFromArray:unreadMessage];
-    NSMutableArray* addIndexpaths = [[NSMutableArray alloc] init];
-    for (NSUInteger index = 0; index < [unreadMessage count]; index ++)
-    {
-        [addIndexpaths addObject:[NSIndexPath indexPathForRow:oldMessageCount + index inSection:0]];
-    }
-    [self.tableView insertRowsAtIndexPaths:addIndexpaths withRowAnimation:UITableViewRowAnimationAutomatic];
-    if (self.module.sessionEntity.sessionType == SESSIONTYPE_SINGLE) {
-        DDSendMessageReadACKAPI* readACKAPI = [[DDSendMessageReadACKAPI alloc] init];
-        [readACKAPI requestWithObject:self.module.sessionEntity.sessionID Completion:^(id response, NSError *error) {
-            
-        }];
-    }else
-    {
-        DDGroupMsgReadACKAPI *groupReadACK = [[DDGroupMsgReadACKAPI alloc] init];
-        [groupReadACK requestWithObject:self.module.sessionEntity.sessionID Completion:^(id response, NSError *error) {
-            
-        }];
-    }
-    
-}
 
 - (void)n_receiveStartLoginNotification:(NSNotification*)notification
 {
-    self.title = @"正在连接...";
+    [self setThisViewTitle:@"正在连接..."];
 }
 
 - (void)n_receiveLoginSuccessNotification:(NSNotification*)notification
 {
     if (self.module.sessionEntity)
-        self.title = self.module.sessionEntity.name;
+    [self setThisViewTitle:self.module.sessionEntity.name];
 }
 
 - (void)n_receiveLoginFailureNotification:(NSNotification*)notification
 {
-    self.title = @"未连接";
+    [self setThisViewTitle:@"未连接"];
 }
 
 - (void)n_receiveUserKickoffNotification:(NSNotification*)notification
@@ -984,7 +916,7 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
         
         [self.chatInputView setFrame:DDINPUT_BOTTOM_FRAME];
     }];
-    DDLog(@"%@",NSStringFromCGRect(DDINPUT_BOTTOM_FRAME));
+    
     [self setValue:@(self.chatInputView.origin.y) forKeyPath:@"_inputViewY"];
 }
 
@@ -996,6 +928,11 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
 - (void)p_unableChatFunction
 {
     [self.chatInputView setUserInteractionEnabled:NO];
+}
+
+- (void)p_popViewController
+{
+    [self.navigationController popViewControllerAnimated:YES];
 }
 
 #pragma mark -
@@ -1031,25 +968,39 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
 {
     if ([keyPath isEqualToString:@"sessionEntity.sessionID"]) {
         if ([change objectForKey:@"new"] !=nil) {
-            self.title=self.module.sessionEntity.name;
+            [self setThisViewTitle:self.module.sessionEntity.name];
         }
     }
     if ([keyPath isEqualToString:@"showingMessages"]) {
- 
-        [self.tableView reloadData];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self.tableView reloadData];
+        });
     }
     if ([keyPath isEqualToString:@"_inputViewY"])
     {
-        if (![change[@"new"] isEqualToNumber:change[@"old"]]) {
-            float maxY = self.view.height - DDINPUT_MIN_HEIGHT;
-            float gap = maxY - _inputViewY;
-            [UIView animateWithDuration:0.25 animations:^{
-                _tableView.contentInset = UIEdgeInsetsMake(_tableView.contentInset.top, 0, gap, 0);
-                _tableView.scrollIndicatorInsets = UIEdgeInsetsMake(0, 0, gap, 0);
-            }];
+        float maxY = FULL_HEIGHT - DDINPUT_MIN_HEIGHT;
+        float gap = maxY - _inputViewY;
+        //            [self p_unableLoadFunction];
+        [UIView animateWithDuration:0.25 animations:^{
+            _tableView.contentInset = UIEdgeInsetsMake(_tableView.contentInset.top, 0, gap, 0);
+            _tableView.scrollIndicatorInsets = UIEdgeInsetsMake(0, 0, gap, 0);
+            
+            if (_bottomShowComponent & DDShowEmotion)
+            {
+                [self.emotions.view setTop:self.chatInputView.bottom];
+            }
+            if (_bottomShowComponent & DDShowUtility)
+            {
+                [self.ddUtility.view setTop:self.chatInputView.bottom];
+            }
+            
+        } completion:^(BOOL finished) {
+            //                [self p_enableLoadFunction];
+        }];
+        if (gap != 0)
+        {
             [self scrollToBottomAnimated:YES];
         }
-        
     }
     
 }
@@ -1136,7 +1087,8 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
     else if (_bottomShowComponent & DDShowUtility)
     {
         //插件面板本来就是显示的,这时需要隐藏所有底部界面
-        [self p_hideBottomComponent];
+//        [self p_hideBottomComponent];
+        [self.chatInputView.textView becomeFirstResponder];
         _bottomShowComponent = _bottomShowComponent & DDHideUtility;
     }
     else if (_bottomShowComponent & DDShowEmotion)
@@ -1185,7 +1137,12 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
         [self.emotions.view setFrame:DDEMOTION_FRAME];
         [self.ddUtility.view setFrame:DDCOMPONENT_BOTTOM];
     }
-    
+    else if (_bottomShowComponent & DDShowEmotion)
+    {
+        //表情面板本来就是显示的,这时需要隐藏所有底部界面
+        [self.chatInputView.textView resignFirstResponder];
+        _bottomShowComponent = _bottomShowComponent & DDHideEmotion;
+    }
     else if (_bottomShowComponent & DDShowUtility)
     {
         //显示的是插件，这时需要隐藏插件，显示表情
@@ -1247,5 +1204,65 @@ typedef NS_ENUM(NSUInteger, PanelStatus)
     {
         [self p_hideBottomComponent];
     }
+}
+
+-(IBAction)titleTap:(id)sender
+{
+    if ([self.module.sessionEntity isGroup]) {
+        return;
+    }
+    [self.module getCurrentUser:^(DDUserEntity *user) {
+    PublicProfileViewControll *profile = [PublicProfileViewControll new];
+        profile.title=user.nick;
+        profile.user=user;
+        [self.navigationController pushViewController:profile animated:YES];
+    }];
+}
+- (void)n_receiveUnreadMessageUpdateNotification:(NSNotification*)notification
+
+{
+      DDLog(@"read message from chattmainview");
+    if (![self.navigationController.topViewController isEqual:self])
+    {
+        //当前不是聊天界面直接返回
+      
+        return;
+    }
+    NSString *senderID = [notification object];
+    NSString *newID = [senderID componentsSeparatedByString:@"_"][1];
+    if (![newID isEqualToString:self.module.sessionEntity.sessionID]) {
+        return;
+    }
+    NSArray* unreadMessages = [[DDMessageModule shareInstance]popAllUnreadMessagesForSessionID:newID];
+    [self.module addShowMessages:unreadMessages];
+    
+    [_tableView reloadData];
+    [self scrollToBottomAnimated:NO];
+}
+- (void)n_receiveMessage:(NSNotification*)notification
+{
+    if (![self.navigationController.topViewController isEqual:self])
+    {
+        //当前不是聊天界面直接返回
+        return;
+    }
+    DDMessageEntity* message = [notification object];
+    
+    //显示消息
+    [[DDSundriesCenter instance] pushTaskToParallelQueue:^{
+        if([message.sessionId isEqualToString:self.module.sessionEntity.sessionID])
+        {
+            [self.module addShowMessage:message];
+            [self.module updateSessionUpdateTime:message.msgTime];
+            [[DDMessageModule shareInstance] clearUnreadMessagesForSessionID:self.module.sessionEntity.sessionID];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self scrollToBottomAnimated:YES];
+                [self.tableView reloadData];
+                
+            });
+        }
+    }];
+    
+    
 }
 @end

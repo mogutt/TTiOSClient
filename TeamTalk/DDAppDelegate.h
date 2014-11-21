@@ -8,10 +8,12 @@
 
 #import <UIKit/UIKit.h>
 #import "std.h"
+#import "MainViewControll.h"
 @interface DDAppDelegate : UIResponder <UIApplicationDelegate>
-
 @property (strong, nonatomic) UIWindow *window;
 @property(nonatomic,strong)UINavigationController *nv;
+@property(strong)MainViewControll* mainViewControll;
+
 @end
 #define TheApp           ([UIApplication sharedApplication])
 #define TheAppDel        ((DDAppDelegate*)TheApp.delegate)

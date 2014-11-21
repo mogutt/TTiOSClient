@@ -7,7 +7,11 @@
 //
 
 #import <UIKit/UIKit.h>
-
+@class DDGroupEntity;
 @interface DDContactsCell : UITableViewCell
 @property(strong)UIButton *button;
+@property(strong)UIImageView *avatar;
+@property(strong)UILabel *nameLabel;
+-(void)setCellContent:(NSString *)avater Name:(NSString *)nameLabel;
+- (void)setGroupAvatar:(DDGroupEntity*)group;
 @end

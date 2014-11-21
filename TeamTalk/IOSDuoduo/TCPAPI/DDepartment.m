@@ -16,7 +16,7 @@
         self.ID = @"";
         self.parentID=@"";
         self.title=@"";
-        self.description=@"";
+        self.descriptionText=@"";
         self.leader=@"";
         self.status=0;
         self.count=0;
@@ -29,7 +29,7 @@
     DDepartment *department = [DDepartment new];
     department.ID = [dic objectForKey:@"departID"];
     department.title = [dic objectForKey:@"title"];
-    department.description = [dic objectForKey:@"description"];
+    department.descriptionText = [dic objectForKey:@"description"];
     department.leader = [dic objectForKey:@"leader"];
     department.parentID = [dic objectForKey:@"parentID"];
     department.status = [[dic objectForKey:@"status"] integerValue];

@@ -9,5 +9,6 @@
 #import <Foundation/Foundation.h>
 
 @interface DDBaseEntity : NSObject
-@property(assign)NSInteger lastUpdateTime;
+@property(assign)long lastUpdateTime;
+@property(copy)NSString *objID;
 @end

@@ -12,7 +12,8 @@
 #import "DDReceiveGroupAddMemberAPI.h"
 #import "DDRecentGroupAPI.h"
 #import "DDDatabaseUtil.h"
-#import "DDFixedGroupAPI.h"
+#import "GroupAvatarImage.h"
+#import "DDNotificationHelp.h"
 @implementation DDGroupModule
 - (instancetype)init
 {
@@ -24,8 +25,12 @@
         [[DDDatabaseUtil instance] loadGroupsCompletion:^(NSArray *contacts, NSError *error) {
             [contacts enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
                 DDGroupEntity *group = (DDGroupEntity *)obj;
-                [self.recentlyGroup setObject:group forKey:group.groupId];
+                if(group.objID)
+                {
+                   [self.recentlyGroup setObject:group forKey:group.objID];
+                }
             }];
+              [DDNotificationHelp postNotification:DDNotificationLoadLocalGroupFinish userInfo:nil object:nil];
             
         }];
         [self registerAPI];
@@ -54,12 +59,12 @@
         return;
     }
     DDGroupEntity* group = newGroup;
-    if([self isContainGroup:newGroup.groupId])
+    if([self isContainGroup:newGroup.objID])
     {
-        group = [_allGroups valueForKey:newGroup.groupId];
+        group = [_allGroups valueForKey:newGroup.objID];
         [group copyContent:newGroup];
     }
-    [_allGroups setObject:group forKey:group.groupId];
+    [_allGroups setObject:group forKey:group.objID];
 //    DDSessionModule* sessionModule = getDDSessionModule();
 //    NSArray* recentleSession = [sessionModule recentlySessionIds];
 //    if ([recentleSession containsObject:group.groupId] &&
@@ -92,12 +97,6 @@
 - (void)getGroupInfogroupID:(NSString*)groupID completion:(GetGroupInfoCompletion)completion
 {
   
-    DDGroupEntity* localGroup = [self getGroupByGId:groupID];
-    if (localGroup)
-    {
-        completion(localGroup);
-        return;
-    }
     DDGroupInfoAPI* groupInfo = [[DDGroupInfoAPI alloc] init];
     
     [groupInfo requestWithObject:groupID Completion:^(id response, NSError *error) {
@@ -109,11 +108,6 @@
                 [self addGroup:group];
             }
             completion(group);
-        }
-        else
-        {
-            DDLog(@"error:%@ groupID:%@",[error domain],groupID);
-            [self getGroupInfogroupID:groupID completion:completion];
         }
     }];
 }
@@ -128,38 +122,38 @@
     //获取最近群
     
 
-    DDReceiveGroupAddMemberAPI* addmemberAPI = [[DDReceiveGroupAddMemberAPI alloc] init];
-    [addmemberAPI registerAPIInAPIScheduleReceiveData:^(id object, NSError *error) {
-        if (!error)
-        {
-            
-            DDGroupEntity* groupEntity = (DDGroupEntity*)object;
-            if (!groupEntity)
-            {
-                return;
-            }
-            if ([self getGroupByGId:groupEntity.groupId])
-            {
-                //自己本身就在组中
-                
-            }
-            else
-            {
-                //自己被添加进组中
-                
-                groupEntity.lastUpdateTime = [[NSDate date] timeIntervalSince1970];
-                [[DDGroupModule instance] addGroup:groupEntity];
-//                [self addGroup:groupEntity];
-//                DDSessionModule* sessionModule = getDDSessionModule();
-//                [sessionModule createGroupSession:groupEntity.groupId type:GROUP_TYPE_TEMPORARY];
-                [[NSNotificationCenter defaultCenter] postNotificationName:DDNotificationRecentContactsUpdate object:nil];
-            }
-        }
-        else
-        {
-            DDLog(@"error:%@",[error domain]);
-        }
-    }];
+//    DDReceiveGroupAddMemberAPI* addmemberAPI = [[DDReceiveGroupAddMemberAPI alloc] init];
+//    [addmemberAPI registerAPIInAPIScheduleReceiveData:^(id object, NSError *error) {
+//        if (!error)
+//        {
+//            
+//            DDGroupEntity* groupEntity = (DDGroupEntity*)object;
+//            if (!groupEntity)
+//            {
+//                return;
+//            }
+//            if ([self getGroupByGId:groupEntity.objID])
+//            {
+//                //自己本身就在组中
+//                
+//            }
+//            else
+//            {
+//                //自己被添加进组中
+//                
+//                groupEntity.lastUpdateTime = [[NSDate date] timeIntervalSince1970];
+//                [[DDGroupModule instance] addGroup:groupEntity];
+////                [self addGroup:groupEntity];
+////                DDSessionModule* sessionModule = getDDSessionModule();
+////                [sessionModule createGroupSession:groupEntity.groupId type:GROUP_TYPE_TEMPORARY];
+//                [[NSNotificationCenter defaultCenter] postNotificationName:DDNotificationRecentContactsUpdate object:nil];
+//            }
+//        }
+//        else
+//        {
+//            DDLog(@"error:%@",[error domain]);
+//        }
+//    }];
     
 //    DDReceiveGroupDeleteMemberAPI* deleteMemberAPI = [[DDReceiveGroupDeleteMemberAPI alloc] init];
 //    [deleteMemberAPI registerAPIInAPIScheduleReceiveData:^(id object, NSError *error) {
@@ -192,12 +186,26 @@
 -(void)addRecentlyGroup:(NSArray *)array
 {
     [array enumerateObjectsUsingBlock:^(DDGroupEntity * obj, NSUInteger idx, BOOL *stop) {
-        [self.recentlyGroup setObject:obj forKey:obj.groupId];
-        [self addGroup:obj];
-        [[DDDatabaseUtil instance] updateRecentGroup:obj completion:^(NSError *error) {
-
-        }];
+        if(obj.objID)
+        {
+            if (obj.isShield) {
+                [TheRuntime addToShielding:obj.objID];
+            }
+            [self.recentlyGroup setObject:obj forKey:obj.objID];
+            [self addGroup:obj];
+            [[DDDatabaseUtil instance] updateRecentGroup:obj completion:^(NSError *error) {
+                
+            }];
+        }
     }];
   
+}
+-(void)saveRecentLyGroup
+{
+    [[self.recentlyGroup allValues] enumerateObjectsUsingBlock:^(DDGroupEntity *obj, NSUInteger idx, BOOL *stop) {
+        [[DDDatabaseUtil instance] updateRecentGroup:obj completion:^(NSError *error) {
+            
+        }];
+    }];
 }
 @end

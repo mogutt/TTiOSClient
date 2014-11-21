@@ -12,7 +12,6 @@
 #import "DDUserModule.h"
 #import "ChatEditTableViewCell.h"
 #import "ContactsViewController.h"
-#import "UIImageView+WebCache.h"
 #import "DDCreateGroupAPI.h"
 #import "RuntimeStatus.h"
 #import "DDGroupModule.h"
@@ -24,16 +23,18 @@
 #import "DDPersonEditCollectionCell.h"
 #import "DDMessageModule.h"
 #import "ChattingMainViewController.h"
+#import "ShieldGroupMessageAPI.h"
 @interface DDChattingEditViewController ()
 @property(nonatomic,strong)ChattingEditModule *model;
 @property(nonatomic,strong)NSMutableArray *temp;
-@property(nonatomic,strong) DDUserEntity *plusImage;
+@property(nonatomic,strong) DDUserEntity *edit;
 @property(strong)NSMutableArray *willDeleteItems;
-@property(nonatomic,strong)DDUserEntity *minus_sign;
+@property(strong)UISwitch *shieldingOn;
 @property(strong) UITableView *tableView;
 @property(weak)IBOutlet UICollectionView *collectionView;
 @property(assign)BOOL isShowEdit;
 @property(strong)UIButton *btn;
+@property(strong)DDGroupEntity *group;
 @end
 
 @implementation DDChattingEditViewController
@@ -59,32 +60,28 @@
     self.collectionView.delegate = self;
 	self.collectionView.dataSource = self;
 
-    //[self.view addSubview:self.gridView];
-    self.plusImage = [DDUserEntity new];
-    self.plusImage.avatar=@"add";
-    self.minus_sign = [DDUserEntity new];
-    self.minus_sign.avatar=@"delete";
-    self.users = [NSMutableArray new];
-    self.temp = [NSMutableArray arrayWithArray:@[self.plusImage,self.minus_sign]];
+    self.edit = [DDUserEntity new];
+    self.edit.avatar=@"edit";
+    self.edit.userRole=99999;
+    self.items = [NSMutableArray new];
+    self.temp = [NSMutableArray arrayWithArray:@[self.edit]];
     self.groupName=@"";
-    [self.users addObjectsFromArray:self.temp];
-    self.tableView=[[UITableView alloc] initWithFrame:CGRectMake(-1, 304, 321, 132)];
+    [self.items addObjectsFromArray:self.temp];
+    self.tableView=[[UITableView alloc] initWithFrame:CGRectMake(0, 304, 321, 188) style:UITableViewStyleGrouped];
     self.tableView.delegate=self;
+    self.tableView.scrollEnabled=NO;
     self.tableView.dataSource=self;
-    [self.tableView.layer setBorderWidth:0.5];
-    [self.tableView.layer setBorderColor:RGB(199, 199, 196).CGColor];
+//    [self.tableView.layer setBorderWidth:0.5];
+//    [self.tableView.layer setBorderColor:RGB(199, 199, 196).CGColor];
+    [self.tableView setBackgroundColor:[UIColor clearColor]];
     [self.view addSubview:self.tableView];
-    UIView *view = [[UIView alloc] initWithFrame:self.collectionView.frame];
-    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(hiddenDeleteButton)];
-    [view addGestureRecognizer:tap];
-    self.collectionView.backgroundView=view;
     [self.collectionView registerClass:[DDPersonEditCollectionCell class] forCellWithReuseIdentifier:@"PersonCollectionCell"];
-    
+     [self loadGroupUsers];
 
 }
 -(NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section
 {
-    return [self.users count];
+    return [self.items count];
 }
 
 - (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout minimumInteritemSpacingForSectionAtIndex:(NSInteger)section {
@@ -94,131 +91,78 @@
 {
     
     DDPersonEditCollectionCell *cell =[collectionView dequeueReusableCellWithReuseIdentifier:@"PersonCollectionCell" forIndexPath:indexPath];
-    DDUserEntity *user = [self.users objectAtIndex:indexPath.row];
-    [cell.name setText:user.nick];
-    [cell.name setTextColor:GRAYCOLOR];
-    if ([user.avatar isEqualToString:@"add"]) {
-        cell.tag=100;
-        cell.personIcon.image = [UIImage imageNamed:user.avatar];
-        
-    }else if([user.avatar isEqualToString:@"delete"])
-    {
-        cell.tag=101;
-         cell.personIcon.image= [UIImage imageNamed:user.avatar];
-    }else
-    {
-        [cell.personIcon sd_setImageWithURL:[NSURL URLWithString:user.avatar] placeholderImage:[UIImage imageNamed:@"user_placeholder"]];
-        UIButton *btn = [UIButton buttonWithType:UIButtonTypeRoundedRect];
-        [btn setImage:[UIImage imageNamed:@"dd_preview_select"] forState:UIControlStateNormal];
-        btn.tag=indexPath.row;
-        [btn addTarget:self action:@selector(deleteContact:) forControlEvents:UIControlEventTouchUpInside];
-        [btn setFrame:CGRectMake(45, 0, 30, 30)];
-        [btn setHidden:NO];
-        if (self.isShowEdit)
-            
-            [btn setHidden:NO];
-        else
-            [btn setHidden:YES];
-        
-        [cell.contentView addSubview:btn];
-        return cell ;
-    }
+    DDUserEntity *user = [self.items objectAtIndex:indexPath.row];
+    [cell setContent:user.nick AvatarImage:user.avatar];
     return cell ;
 }
--(void)hiddenDeleteButton
-{
-    if (self.isShowEdit) {
-        self.isShowEdit=NO;
-        [self.collectionView reloadData];
-        if ([self.willDeleteItems count]>0) {
-            [self editUsersToGroup:self.willDeleteItems isAdd:1];
-        }
-       
-    }
 
-}
 -(void)viewWillAppear:(BOOL)animated
 {
     [super viewWillAppear:animated];
     [self.tabBarController.tabBar setHidden:YES];
-    [self loadGroupUsers];
+    DDUserEntity *user = [self.items lastObject];
+    if (user.userRole!=99999) {
+        [self.items addObject:self.edit];
+    }
 }
-
+-(void)viewDidAppear:(BOOL)animated
+{
+    [super viewDidAppear:animated];
+     [self.tabBarController.tabBar setHidden:YES];
+}
 
 -(void)loadGroupUsers
 {
     
-    if([self.users count] >2)
-        {
-            [self.users removeObjectsInRange:NSMakeRange(0, [self.users count]-2)];
-        }
-        DDGroupEntity *group = [[DDGroupModule instance] getGroupByGId:self.session.sessionID];
-        self.groupName = group.name;
-        if ([group.groupUserIds count] >0) {
-            [group.groupUserIds enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-                NSString *userID = (NSString *)obj;
-                [[DDDatabaseUtil instance] getUserFromID:userID completion:^(DDUserEntity *user) {
-                    if (user) {
-                        [self.users insertObject:user atIndex:0];
-                        [self.collectionView reloadData];
-                        [self.tableView reloadData];
-                    }
-                }];
-            }];
+    if([self.items count] >2)
+    {
+        [self.items removeObjectsInRange:NSMakeRange(0, [self.items count]-2)];
     }
-
+   self.group = [[DDGroupModule instance] getGroupByGId:self.session.sessionID];
+    self.groupName = self.group.name;
+    if ([self.group.groupUserIds count] >0) {
+        [self.group.groupUserIds enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+            NSString *userID = (NSString *)obj;
+            [[DDDatabaseUtil instance] getUserFromID:userID completion:^(DDUserEntity *user) {
+                if (user) {
+                    [self.items insertObject:user atIndex:0];
+                    [self.collectionView reloadData];
+                    [self.tableView reloadData];
+                }
+            }];
+        }];
+    }
+    if (!self.group)
+    {
+        DDSessionEntity* session = self.session;
+        [[DDUserModule shareInstance] getUserForUserID:session.sessionID Block:^(DDUserEntity *user) {
+            [self.items insertObject:user atIndex:0];
+            [self.collectionView reloadData];
+        }];
+    }
 }
-
--(IBAction)deleteContact:(id)sender
+-(void)refreshUsers:(NSMutableArray *)array
 {
-    UIButton *btn = (UIButton *)sender;
-    DDUserEntity *user = [self.users objectAtIndex:btn.tag];
-    [self.users removeObject:user];
-    [self.willDeleteItems addObject:user];
+    
+    [self.items removeAllObjects];
+    [self.items addObjectsFromArray:array];
+    [self.items addObject:self.edit];
     [self.collectionView reloadData];
+    [self.tableView reloadData];
 }
+
 - (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath
 {
-    DDUserEntity *user = self.users[indexPath.row];
-    if ([user.avatar isEqualToString:@"add"]) {
+    DDUserEntity *user = self.items[indexPath.row];
+    if (user.userRole == 99999) {
         //添加联系人
-        
         EditGroupViewController *newEdit = [EditGroupViewController new];
-        newEdit.users=self.users;
+        newEdit.group=self.group;
+        newEdit.isGroupCreator=[self.group.groupCreatorId isEqualToString:TheRuntime.user.objID]?YES:NO;
+        newEdit.isCreat=self.group.objID?NO:YES;
+        newEdit.users=self.items;
         newEdit.editControll=self;
-//        ContactsViewController *selectContact=  [ContactsViewController new];
-//        selectContact.block=^(NSArray *array)
-//        {
-//            if ([array count] !=0) {
-//                BOOL isCreat = NO;
-//                if ([self.users count] == 2) {
-//                    isCreat=YES;
-//                }
-//                
-//                [self.users removeObjectsInArray:array];
-//                [self.users addObjectsFromArray:array];
-//                [self.users removeObject:self.plusImage];
-//                [self.users addObject:self.plusImage];
-//                [self.users removeObject:self.minus_sign];
-//                [self.users addObject:self.minus_sign];
-//                if (isCreat) {
-//                    [self createGroup];
-//                }else
-//                {
-//                    [self editUsersToGroup:array isAdd:YES];
-//                }
-//                
-//            }
-//        };
-        
         [self.navigationController pushViewController:newEdit animated:YES];
-    }else if ([user.avatar isEqualToString:@"delete"])
-    {
-        //删除联系人
-        self.isShowEdit =YES;
-        
-        [self.collectionView reloadData];
-        
     }else if (user) {
         PublicProfileViewControll *public = [PublicProfileViewControll new];
         public.user=user;
@@ -239,7 +183,8 @@
 }
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
-    return 3;
+        return 1;
+   
 }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
@@ -248,81 +193,21 @@
     if (cell == nil) {
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIdentifier];
     }
-    cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator;
-    if (indexPath.row == 0) {
-        [cell.textLabel setText:@"群聊名称"];
-        UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(135, 14, 150, 17)];
-        [label setTextAlignment:NSTextAlignmentRight];
-        [label setTextColor:GRAYCOLOR];
-        [label setText:self.groupName];
-        [cell.contentView addSubview:label];
-    }else if(indexPath.row == 1)
+    if (self.groupName)
     {
-         [cell.textLabel setText:@"群二维码"];
-        UIImageView *image = [[UIImageView alloc] initWithFrame:CGRectMake(220, 7, 30, 30)];
-        [image setImage:[UIImage imageNamed:@"plus"]];
-        [cell.contentView addSubview:image];
-    }else if(indexPath.row == 2)
-    {
-         [cell.textLabel setText:@"通知"];
-        UISwitch *mySwitch = [[UISwitch alloc] initWithFrame:CGRectMake(220, 7, 40, 30)];
-        [mySwitch setOn:NO];
-        [mySwitch addTarget:self action:@selector(switchAction:) forControlEvents:UIControlEventValueChanged];
-        [cell.contentView addSubview:mySwitch];
+        if (indexPath.row == 0) {
+            [cell.textLabel setText:@"群聊名称"];
+            UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(135, 14, 150, 17)];
+            [label setTextAlignment:NSTextAlignmentRight];
+            [label setTextColor:GRAYCOLOR];
+            [label setText:self.groupName];
+            [cell.contentView addSubview:label];
+        }
+
     }
     return cell;
 
 }
--(void)switchAction:(id)sender
-{
-    UISwitch *switchButton = (UISwitch*)sender;
-    BOOL isButtonOn = [switchButton isOn];
-}
--(NSString *)creatGroupName
-{
-    DDUserEntity *user1 = [self.users objectAtIndex:0];
-    DDUserEntity *user2 = [self.users objectAtIndex:1];
-    DDUserEntity *user3 = [self.users objectAtIndex:2];
-    NSString *string = [NSString stringWithFormat:@"%@,%@,%@",user1.nick,user2.nick,user3.nick];
-    return string;
-}
--(void)createGroup
-{
-    DDCreateGroupAPI *creatGroup = [[DDCreateGroupAPI alloc] init];
-    __block NSMutableArray *userIDs = [NSMutableArray new];
-    [self.users enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-        DDUserEntity *user = (DDUserEntity *)obj;
-        if (user.userId) {
-            [userIDs addObject:user.userId];
-        }
-    }];
-    NSArray *array =@[[self creatGroupName],@"",userIDs];
-    [creatGroup requestWithObject:array Completion:^(DDGroupEntity * response, NSError *error) {
-        [[DDGroupModule instance] addGroup:response];
-        self.session.sessionID=response.groupId;
-        self.session.sessionType=SESSIONTYPE_TEMP_GROUP;
-        DDSessionEntity *session = [[DDSessionEntity alloc] initWithSessionID:response.groupId type:SESSIONTYPE_TEMP_GROUP];
-        [ChattingMainViewController shareInstance].module.sessionEntity =session;
-        [self loadGroupUsers];
-    }];
-}
--(void)editUsersToGroup:(NSArray *)users isAdd:(BOOL)isadd
-{
-    int opreate = isadd?0:1;
-    DDAddMemberToGroupAPI *addMember = [[DDAddMemberToGroupAPI alloc] init];
-    __block NSMutableArray *userIDs = [NSMutableArray new];
-    [users enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-        DDUserEntity *user = (DDUserEntity *)obj;
-        if (user.userId) {
-            [userIDs addObject:user.userId];
-        }
-    }];
-    [addMember requestWithObject:@[[self.session getSessionGroupID],userIDs,@(opreate)] Completion:^(id response, NSError *error) {
-        DDGroupEntity *group = (DDGroupEntity *)response;
-        self.session.sessionID=group.groupId;
-        self.session.sessionType=SESSIONTYPE_TEMP_GROUP;
-        [[DDGroupModule instance] addGroup:group];
-        [self loadGroupUsers];
-    }];
-}
+
+
 @end

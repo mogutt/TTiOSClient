@@ -10,13 +10,16 @@
 #import "std.h"
 #import "PublicProfileViewControll.h"
 #import "ContactsModule.h"
-#import "UIImageView+WebCache.h"
 #import "DDGroupEntity.h"
 #import "DDSearch.h"
 #import "ContactAvatarTools.h"
 #import "DDContactsCell.h"
+#import "DDUserDetailInfoAPI.h"
 #import "DDGroupModule.h"
 #import "ChattingMainViewController.h"
+#import "SearchContentViewController.h"
+#import "MBProgressHUD.h"
+#import "DDFixedGroupAPI.h"
 @interface ContactsViewController ()
 @property(strong)UISegmentedControl *seg;
 @property(strong)NSMutableDictionary *items;
@@ -26,9 +29,9 @@
 @property(strong)NSArray *searchResult;
 @property(strong)UITableView *tableView;
 @property(strong)UISearchBar *searchBar;
-@property(strong)NSMutableArray *selectedItems;
 @property(strong)ContactAvatarTools *tools;
 @property(strong)UISearchDisplayController *searchController;
+@property(strong)MBProgressHUD *hud;
 @property(assign)int selectIndex;
 @end
 
@@ -39,14 +42,17 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    
     self.edgesForExtendedLayout = UIRectEdgeNone;
     self.extendedLayoutIncludesOpaqueBars = NO;
-       [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(refreshAllContacts) name:@"refreshAllContacts" object:nil];
+    self.hud = [[MBProgressHUD alloc] initWithView:self.view];
+    [self.view addSubview:self.hud];
+    self.hud.dimBackground = YES;
+    self.hud.labelText=@"正在加载...";
+    [self.hud show:YES];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(refreshAllContacts) name:@"refreshAllContacts" object:nil];
     self.groups = [NSMutableArray new];
     self.title=@"联系人";
     self.model = [ContactsModule new];
-    self.selectedItems = [NSMutableArray new];
     self.searchResult = [NSArray new];
     self.seg = [[UISegmentedControl alloc] initWithItems:@[@"全部",@"部门"]];
     self.seg.selectedSegmentIndex=0;
@@ -54,36 +60,74 @@
     [self.seg addTarget:self action:@selector(segmentAction:) forControlEvents:UIControlEventValueChanged];
     self.navigationItem.titleView=self.seg;
     self.searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, 320, 40)];
-    [self.searchBar setPlaceholder:@"输入名字搜索"];
+    [self.searchBar setPlaceholder:@"搜索"];
+    [self.searchBar setBarTintColor:RGB(242, 242, 244)];
     self.searchBar.delegate=self;
     [self.searchBar setBarStyle:UIBarStyleDefault];
     [self.view addSubview:self.searchBar];
-    self.searchController = [[UISearchDisplayController alloc] initWithSearchBar:self.searchBar contentsController:self];
-    self.searchController.delegate=self;
-    self.searchController.searchResultsDataSource=self;
-    self.searchController.searchResultsDelegate=self;
-    self.tableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 40, 320, self.view.frame.size.height-155)];
+   
+    self.tableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 40, 320,(self.tabBarController.tabBar.isHidden?self.view.frame.size.height:self.view.frame.size.height-152))];
     self.tableView.delegate=self;
     self.tableView.tag=100;
     self.tableView.dataSource=self;
     [self.view addSubview:self.tableView];
-    
-    if (self.block) {
-        UIBarButtonItem *item = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemSave target:self action:@selector(saveSelectItems)];
-        super.navigationItem.rightBarButtonItem=item;
-    }
-    
-    NSArray *array = [[DDGroupModule instance] getAllGroups];
-    [array enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-        DDGroupEntity *group = (DDGroupEntity *)obj;
-        if (group.groupType == GROUP_TYPE_FIXED) {
-            [self.groups addObject:group];
-        }
+    DDFixedGroupAPI *fixedGroupApi = [DDFixedGroupAPI new];
+    [fixedGroupApi requestWithObject:nil Completion:^(NSArray *response, NSError *error) {
+        [self.groups addObjectsFromArray:response];
+        [self.tableView reloadData];
     }];
- 
+//    NSArray *array = [[DDGroupModule instance] getAllGroups];
+//    [array enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+//        DDGroupEntity *group = (DDGroupEntity *)obj;
+//        if (group.groupType == GROUP_TYPE_FIXED) {
+//            [self.groups addObject:group];
+//        }
+//    }];
+    
+}
+-(void)scrollToTitle:(NSNotification *)notification
+{
+    NSString *string = [notification object];
+    self.sectionTitle=string;
+}
+-(void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    self.sectionTitle=nil;
+}
+-(void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    if (self.isSearchResult) {
+        [self.tabBarController.tabBar setHidden:YES];
+    }else
+    {
+        [self.tabBarController.tabBar setHidden:NO];
+    }
+    if (self.sectionTitle) {
+        [self.seg setSelectedSegmentIndex:1];
+        self.selectIndex=1;
+        [self swichToShowDepartment];
+        if ([self.allKeys count]) {
+            int location = [self.allKeys indexOfObject:self.sectionTitle];
+            [self.tableView scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:location] atScrollPosition:UITableViewScrollPositionTop animated:YES];
+        }
+        return;
+    }
+
+   
 }
 -(void)refreshAllContacts
 {
+    if (self.sectionTitle) {
+        [self.seg setSelectedSegmentIndex:1];
+        self.selectIndex=1;
+        [self swichToShowDepartment];
+        int location = [self.allKeys indexOfObject:self.sectionTitle];
+        [self.tableView scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:location] atScrollPosition:UITableViewScrollPositionTop animated:YES];
+        return;
+    }
+
     switch (self.selectIndex) {
         case 0:
             [self swichContactsToALl];
@@ -98,40 +142,10 @@
 }
 
 
--(BOOL)searchDisplayController:(UISearchDisplayController *)controller shouldReloadTableForSearchString:(NSString *)searchString {
-    if ([searchString isEqualToString:@""]) {
-        return NO;
-    }
-    [[DDSearch instance] searchContent:searchString completion:^(NSArray *result, NSError *error) {
-        self.searchResult=result;
-        [self.self.searchDisplayController.searchResultsTableView reloadData];
-    }];
-  
-    return YES;
-}
-
-
--(void)saveSelectItems
-{
-    self.block(self.selectedItems);
-    [self.navigationController popViewControllerAnimated:YES];
-}
-- (BOOL)searchBarShouldBeginEditing:(UISearchBar *)searchBar{
-    [self.searchBar setShowsCancelButton:YES animated:YES];
-    [self.searchController setActive:YES animated:YES];
-    return YES;
-    
-}
-- (void)searchBarCancelButtonClicked:(UISearchBar *)searchBar{
-    [self.searchBar resignFirstResponder];
-    [self.searchBar setShowsCancelButton:NO animated:YES];
-    [self.tableView reloadData];
-}
 
 -(void)viewDidAppear:(BOOL)animated
 {
     [super viewDidAppear:animated];
-    [self.tableView reloadData];
 }
 -(void)swichContactsToALl
 {
@@ -147,15 +161,21 @@
     [self.tableView reloadData];
 }
 -(NSArray*)sectionIndexTitlesForTableView:(UITableView *)tableView{
+    NSMutableArray* array = [[NSMutableArray alloc] init];
     if (self.selectIndex == 1) {
-        NSMutableArray *arr = [NSMutableArray new];
         [[self allKeys] enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
             char firstLetter = getFirstChar((NSString *)obj);
-            [arr addObject:[NSString stringWithFormat:@"%c",firstLetter]];
+            [array addObject:[[NSString stringWithFormat:@"%c",firstLetter] uppercaseString]];
         }];
-        return arr;
     }
-    return [self allKeys];
+    else
+    {
+        NSArray* allKeys = [self allKeys];
+        [allKeys enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+            [array addObject:[obj uppercaseString]];
+        }];
+    }
+    return array;
 }
 -(IBAction)segmentAction:(UISegmentedControl *)sender
 {
@@ -188,50 +208,54 @@
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
 {
     
-    // Return the number of sections.
-    if (tableView.tag == 100) {
-        return [[self.items allKeys] count]+2;
-    }
-    return 1;
+        if (self.selectIndex == 0) {
+            return [[self.items allKeys] count]+2;
+        }
+        return [[self.items allKeys] count];
+    
 }
 
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
-    
-    // Return the number of rows in the section.
-    if (tableView.tag ==100) {
-        if (section == 0) {
-            return [self.groups count];
-        }else if (section == 1)
-        {
-            NSLog(@"%d........",[[ContactsModule getFavContact] count]);
-            return [[ContactsModule getFavContact] count];
+        if (self.selectIndex == 0) {
+            if (section == 0) {
+                return [self.groups count];
+            }else if (section == 1)
+            {
+                NSLog(@"%d........",[[ContactsModule getFavContact] count]);
+                return [[ContactsModule getFavContact] count];
+            }
+            else
+            {
+                NSString *keyStr = [self allKeys][(NSUInteger) (section - 2)];
+                NSArray *arr = (self.items)[keyStr];
+                return [arr count];
+            }
         }
-        else
-        {
-            NSString *keyStr = [self allKeys][(NSUInteger) (section - 2)];
-            NSArray *arr = (self.items)[keyStr];
-            return [arr count];
-        }
-    }
-    
-    return [self.searchResult count];
+        
+        NSString *keyStr = [self allKeys][(NSUInteger) (section)];
+        NSArray *arr = (self.items)[keyStr];
+        return [arr count];
     
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
-    if (tableView.tag == 100) {
-        if (section == 0) {
-            return @"群";
-        }else if (section == 1)
+        if (self.selectIndex == 0) {
+            if (section == 0) {
+                return @"群";
+            }else if (section == 1)
+            {
+                return @"收藏";
+            }
+            return [self.allKeys[section - 2] uppercaseString];
+        }else
         {
-            return @"收藏";
+              return [self.allKeys[section] uppercaseString];
         }
-        return self.allKeys[section - 2];
-    }
-    return @"搜索结果";
+    
 }
+
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
     static NSString *cellIdentifier = @"contactsCell";
@@ -239,54 +263,43 @@
     if (cell == nil) {
         cell = [[DDContactsCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIdentifier];
     }
-    if (tableView.tag == 100) {
-        if (indexPath.section == 0) {
-            DDGroupEntity *group = [self.groups objectAtIndex:indexPath.row];
-            cell.textLabel.text=group.name;
-        }else if (indexPath.section == 1)
-        {
-            NSArray *arr = [ContactsModule getFavContact];
-            DDUserEntity *user = [arr objectAtIndex:indexPath.row];
-            
-            if ([self.selectedItems containsObject:user]) {
-                cell.accessoryType = UITableViewCellAccessoryCheckmark;
+        if (self.selectIndex == 0) {
+            if (indexPath.section == 0) {
+                DDGroupEntity *group = [self.groups objectAtIndex:indexPath.row];
+                cell.nameLabel.text=group.name;
+                UIImage* placeholder = [UIImage imageNamed:@"user_placeholder"];
+                [cell setGroupAvatar:group];
+            }else if (indexPath.section == 1)
+            {
+                NSArray *arr = [ContactsModule getFavContact];
+                DDUserEntity *user = [arr objectAtIndex:indexPath.row];
+
+                NSString *name =user.nick?user.nick:user.name;
+                [cell setCellContent:user.avatar Name:name];
+               
             }else
             {
-                cell.accessoryType = UITableViewCellAccessoryNone;
+                NSString *keyStr = [[self allKeys] objectAtIndex:indexPath.section-2];
+                NSArray *userArray =[self.items objectForKey:keyStr];
+                DDUserEntity *user = [userArray objectAtIndex:indexPath.row];
+         
+                [cell setCellContent:user.avatar Name:user.nick];
+                cell.button.tag=indexPath.row;
+                [cell.button setTitle:keyStr forState:UIControlStateNormal];
+                [cell.button setTitleColor:[UIColor clearColor] forState:UIControlStateNormal];
+                [cell.button addTarget:self action:@selector(showActions:) forControlEvents:UIControlEventTouchUpInside];
             }
-            cell.textLabel.text=user.nick?user.nick:user.name;
         }else
         {
-            NSString *keyStr = [[self allKeys] objectAtIndex:indexPath.section-2];
+            NSString *keyStr = [[self allKeys] objectAtIndex:indexPath.section];
             NSArray *userArray =[self.items objectForKey:keyStr];
             DDUserEntity *user = [userArray objectAtIndex:indexPath.row];
-            if ([self.selectedItems containsObject:user]) {
-                cell.accessoryType = UITableViewCellAccessoryCheckmark;
-            }else
-            {
-                cell.accessoryType = UITableViewCellAccessoryNone;
-            }
-            cell.textLabel.text=user.nick;
-            NSURL* avatarURL = [NSURL URLWithString:user.avatar];
-            [cell.imageView setClipsToBounds:YES];
-            [cell.imageView.layer setCornerRadius:2.0];
-            [cell.imageView setUserInteractionEnabled:YES];
-            UIImage* placeholder = [UIImage imageNamed:@"user_placeholder"];
-            [cell.imageView setImageWithURL:avatarURL placeholderImage:placeholder];
+            [cell setCellContent:user.avatar Name:user.nick];
             cell.button.tag=indexPath.row;
             [cell.button setTitle:keyStr forState:UIControlStateNormal];
             [cell.button setTitleColor:[UIColor clearColor] forState:UIControlStateNormal];
             [cell.button addTarget:self action:@selector(showActions:) forControlEvents:UIControlEventTouchUpInside];
         }
-
-    }else
-    {
-        DDUserEntity *user =self.searchResult[indexPath.row];
-        cell.textLabel.text=user.nick;
-        
-    }
-    
-    // Configure the cell...
     
     return cell;
 }
@@ -303,16 +316,28 @@
     self.tools = [[ContactAvatarTools alloc] initWithFrame:CGRectMake(rect.origin.x+btn.frame.size.width+5, rect.origin.y-70, 100, 100)];
     __weak ContactsViewController *weakSelf = self;
     if ([user isKindOfClass:[DDUserEntity class]]) {
+        __block DDUserEntity *newUser;
+        DDUserDetailInfoAPI* detailInfoAPI = [[DDUserDetailInfoAPI alloc] init];
+        [detailInfoAPI requestWithObject:@[((DDUserEntity *)user).objID] Completion:^(id response, NSError *error) {
+            if ([response count] > 0)
+            {
+                NSDictionary* userInfo = response[0];
+                newUser = [DDUserEntity dicToUserEntity:userInfo];
+            }
+            else
+            {
+            }
+        }];
         self.tools.block=^(int index){
             switch (index) {
                 case 1:
-                    [weakSelf callNum:(DDUserEntity *)user];
+                    [weakSelf callNum:newUser];
                     break;
                 case 2:
-                    [weakSelf sendEmail:(DDUserEntity *)user];
+                    [weakSelf sendEmail:newUser];
                     break;
                 case 3:
-                    [weakSelf chatTo:(DDUserEntity *)user];
+                    [weakSelf chatTo:newUser];
                 default:
                     break;
             }
@@ -323,18 +348,27 @@
 
 -(void)callNum:(DDUserEntity *)user
 {
+    if (user == nil) {
+        return;
+    }
     NSString *string = [NSString stringWithFormat:@"tel:%@",user.telphone];
     [[UIApplication sharedApplication] openURL:[NSURL URLWithString:string]];
 }
 -(void)sendEmail:(DDUserEntity *)user
 {
+    if (user == nil) {
+    return;
+    }
     NSString *string = [NSString stringWithFormat:@"mailto:%@",user.email];
     [[UIApplication sharedApplication] openURL:[NSURL URLWithString:string]];
 }
 -(void)chatTo:(DDUserEntity *)user
 {
-    DDSessionEntity* session = [[DDSessionEntity alloc] initWithSessionID:user.userId type:SESSIONTYPE_SINGLE];
-    
+    if (user == nil) {
+        return;
+    }
+    DDSessionEntity* session = [[DDSessionEntity alloc] initWithSessionID:user.objID type:SESSIONTYPE_SINGLE];
+    [session setSessionName:user.nick];
     [[ChattingMainViewController shareInstance] showChattingContentForSession:session];
     [self.navigationController pushViewController:[ChattingMainViewController shareInstance] animated:YES];
 }
@@ -351,116 +385,59 @@
         [self.tools hiddenSelf];
         return;
     }
-    if (tableView.tag == 100) {
-    if (indexPath.section == 0) {
-        DDGroupEntity *group = [self.groups objectAtIndex:indexPath.row];
-        DDSessionEntity *session = [[DDSessionEntity alloc] initWithSessionID:group.groupId type:SESSIONTYPE_GROUP];
-        ChattingMainViewController *main = [ChattingMainViewController shareInstance];
-        [main showChattingContentForSession:session];
-        [self.navigationController pushViewController:main animated:YES];
-        return;
-    }
-    if (self.block) {
-        
-        UITableViewCell *oneCell = [tableView cellForRowAtIndexPath: indexPath];
-        DDUserEntity *user =nil;
-        if (indexPath.section == 1) {
-            user = [[ContactsModule getFavContact] objectAtIndex:indexPath.row];
-        }else
-        {
+        if (self.selectIndex == 0) {
+            if (indexPath.section == 0) {
+                DDGroupEntity *group = [self.groups objectAtIndex:indexPath.row];
+                DDSessionEntity *session = [[DDSessionEntity alloc] initWithSessionID:group.objID type:SESSIONTYPE_GROUP];
+                [session setSessionName:group.name];
+                ChattingMainViewController *main = [ChattingMainViewController shareInstance];
+                [main showChattingContentForSession:session];
+                [self.navigationController pushViewController:main animated:YES];
+                return;
+            }
+            if (indexPath.section == 1) {
+                DDUserEntity *user;
+                user = [ContactsModule getFavContact][indexPath.row];
+                PublicProfileViewControll *public = [PublicProfileViewControll new];
+                public.user=user;
+                [self.navigationController pushViewController:public animated:YES];
+                return;
+            }
             NSString *keyStr = [[self allKeys] objectAtIndex:indexPath.section-2];
             NSArray *userArray =[self.items objectForKey:keyStr];
+            DDUserEntity *user;
             user = [userArray objectAtIndex:indexPath.row];
-        }
-        if (oneCell.accessoryType == UITableViewCellAccessoryNone)
-        {
-            oneCell.accessoryType = UITableViewCellAccessoryCheckmark;
-            
-            [self.selectedItems addObject:user];
-        }
-        else
-        {
-            oneCell.accessoryType = UITableViewCellAccessoryNone;
-            [self.selectedItems removeObject:user];
-        }
-        return;
-    }
-    if (indexPath.section == 1) {
-        DDUserEntity *user;
-        user = [ContactsModule getFavContact][indexPath.row];
-        PublicProfileViewControll *public = [PublicProfileViewControll new];
-        public.user=user;
-        [self.navigationController pushViewController:public animated:YES];
-        return;
-    }
-    NSString *keyStr = [[self allKeys] objectAtIndex:indexPath.section-2];
-    NSArray *userArray =[self.items objectForKey:keyStr];
-    DDUserEntity *user;
-    user = [userArray objectAtIndex:indexPath.row];
-    PublicProfileViewControll *public = [PublicProfileViewControll new];
-    public.user=user;
-    [self.navigationController pushViewController:public animated:YES];
+            PublicProfileViewControll *public = [PublicProfileViewControll new];
+            public.user=user;
+            [self.navigationController pushViewController:public animated:YES];
     }else
     {
-        
+        NSString *keyStr = [[self allKeys] objectAtIndex:indexPath.section];
+        NSArray *userArray =[self.items objectForKey:keyStr];
         DDUserEntity *user;
-        user = self.searchResult[indexPath.row];
+        user = [userArray objectAtIndex:indexPath.row];
         PublicProfileViewControll *public = [PublicProfileViewControll new];
         public.user=user;
         [self.navigationController pushViewController:public animated:YES];
+
     }
+   
 }
 -(CGFloat )tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
 {
     return 50;
 }
-/*
- // Override to support conditional editing of the table view.
- - (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath
- {
- // Return NO if you do not want the specified item to be editable.
- return YES;
- }
- */
-
-/*
- // Override to support editing the table view.
- - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath
- {
- if (editingStyle == UITableViewCellEditingStyleDelete) {
- // Delete the row from the data source
- [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
- } else if (editingStyle == UITableViewCellEditingStyleInsert) {
- // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view
- }
- }
- */
-
-/*
- // Override to support rearranging the table view.
- - (void)tableView:(UITableView *)tableView moveRowAtIndexPath:(NSIndexPath *)fromIndexPath toIndexPath:(NSIndexPath *)toIndexPath
- {
- }
- */
-
-/*
- // Override to support conditional rearranging of the table view.
- - (BOOL)tableView:(UITableView *)tableView canMoveRowAtIndexPath:(NSIndexPath *)indexPath
- {
- // Return NO if you do not want the item to be re-orderable.
- return YES;
- }
- */
-
-/*
- #pragma mark - Navigation
- 
- // In a storyboard-based application, you will often want to do a little preparation before navigation
- - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
- {
- // Get the new view controller using [segue destinationViewController].
- // Pass the selected object to the new view controller.
- }
- */
+- (BOOL)searchBarShouldBeginEditing:(UISearchBar *)searchBar
+{
+    [self.navigationController pushViewController:[SearchContentViewController new] animated:YES];
+    return NO;
+}
+-(id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    if (self == [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil]) {
+//        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(scrollToTitle:) name:@"SearchDerpartment" object:nil];
+    }
+    return self;
+}
 
 @end

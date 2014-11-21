@@ -8,44 +8,12 @@
 
 
 #import <Foundation/Foundation.h>
-#import "NSString+Additions.h"
 #import "XLog.h"
 #import "MD5.h"
-#import "NSObject+Property.h"
 
 
 #define objectOrNull(obj) ((obj) ? (obj) : [NSNull null])
 #define objectOrEmptyStr(obj) ((obj) ? (obj) : @"")
-
-#define safeMakeDictItem(k, v) objectOrEmptyStr(k):objectOrEmptyStr(v)
-
-#define safeDictionary1(k1, v1) @{objectOrEmptyStr(k1):objectOrEmptyStr(v1)}
-
-#define safeDictionary2(k1, v1, k2, v2) @{objectOrEmptyStr(k1):objectOrEmptyStr(v1), \
-objectOrEmptyStr(k2):objectOrEmptyStr(v2)}
-
-#define safeDictionary3(k1, v1, k2, v2, k3, v3) @{objectOrEmptyStr(k1):objectOrEmptyStr(v1), \
-objectOrEmptyStr(k2):objectOrEmptyStr(v2), \
-objectOrEmptyStr(k3):objectOrEmptyStr(v3)}
-
-#define safeDictionary4(k1, v1, k2, v2, k3, v3, k4, v4) @{objectOrEmptyStr(k1):objectOrEmptyStr(v1), \
-objectOrEmptyStr(k2):objectOrEmptyStr(v2), \
-objectOrEmptyStr(k3):objectOrEmptyStr(v3), \
-objectOrEmptyStr(k4):objectOrEmptyStr(v4)}
-
-#define safeDictionary5(k1, v1, k2, v2, k3, v3, k4, v4, k5, v5) @{objectOrEmptyStr(k1):objectOrEmptyStr(v1), \
-objectOrEmptyStr(k2):objectOrEmptyStr(v2), \
-objectOrEmptyStr(k3):objectOrEmptyStr(v3), \
-objectOrEmptyStr(k4):objectOrEmptyStr(v4), \
-objectOrEmptyStr(k5):objectOrEmptyStr(v5)}
-
-#define safeDictionary6(k1, v1, k2, v2, k3, v3, k4, v4, k5, v5, k6, v6) @{objectOrEmptyStr(k1):objectOrEmptyStr(v1), \
-objectOrEmptyStr(k2):objectOrEmptyStr(v2), \
-objectOrEmptyStr(k3):objectOrEmptyStr(v3), \
-objectOrEmptyStr(k4):objectOrEmptyStr(v4), \
-objectOrEmptyStr(k5):objectOrEmptyStr(v5), \
-objectOrEmptyStr(k6):objectOrEmptyStr(v6)}
-
 
 #define isNull(x)             (!x || [x isKindOfClass:[NSNull class]])
 #define toInt(x)              (isNull(x) ? 0 : [x intValue])
@@ -77,23 +45,19 @@ objectOrEmptyStr(k6):objectOrEmptyStr(v6)}
 // 屏幕宽度
 #define SCREEN_WIDTH          [[UIScreen mainScreen] bounds].size.width
 #define PhotosMessageDir ([[NSString documentPath] stringByAppendingPathComponent:@"/PhotosMessageDir/"])
+#define IPHONE4 ( [ [ UIScreen mainScreen ] bounds ].size.height == 480 )
 //字体颜色
 #define GRAYCOLOR RGB(137, 139, 144)
-extern NSString * const kInvited;
-extern NSString * const kUserSetting;
-extern NSString * const kLastLoginUser;
-extern NSString * const kHasAlertVIP;
-extern NSString * const kLastPosition;
-extern NSString * const kAccessToken;
-extern NSString * const kRefreshToken;
-extern NSString * const kTokenExpiredTime;
-extern NSString * const kAppVersion;
-extern NSString * const kArrowCount;
+
+
+
 #define FileManager     ([NSFileManager defaultManager])
 #define TheUserDefaults ([NSUserDefaults standardUserDefaults])
 #define VoiceMessageDir ([[NSString documentPath] stringByAppendingPathComponent:@"/VoiceMessageDir/"])
 #define BlacklistDir ([[NSString documentPath] stringByAppendingPathComponent:@"/BlacklistDir/"])
 #define Departmentlist ([[NSString documentPath] stringByAppendingPathComponent:@"/department.plist"])
+#define fixedlist ([[NSString documentPath] stringByAppendingPathComponent:@"/fixed.plist"])
+#define shieldinglist ([[NSString documentPath] stringByAppendingPathComponent:@"/shieldingArray.plist"])
 #define TheBundleVerison (bundleVerison())
 #undef	AS_SINGLETON
 #define AS_SINGLETON( __class ) \

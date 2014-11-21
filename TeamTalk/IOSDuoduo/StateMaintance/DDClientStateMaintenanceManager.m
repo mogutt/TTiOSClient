@@ -13,9 +13,11 @@
 #import "DDHeartbeatAPI.h"
 #import "DDLoginServer.h"
 #import "LoginModule.h"
+#import "NetwrokStatusNotifyUI.h"
+#import "RecentUsersViewController.h"
 static NSInteger const heartBeatTimeinterval = 30;
 static NSInteger const serverHeartBeatTimeinterval = 60;
-static NSInteger const reloginTimeinterval = 1;
+static NSInteger const reloginTimeinterval = 4;
 
 @interface DDClientStateMaintenanceManager(PrivateAPI)
 
@@ -64,18 +66,19 @@ static NSInteger const reloginTimeinterval = 1;
     {
         [self p_registerClientStateObserver];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(n_receiveServerHeartBeat) name:DDNotificationServerHeartBeat object:nil];
-        
     }
     return self;
 }
 
 - (void)dealloc
 {
+    DDLog(@"DDClientStateMaintenanceManager release");
     [[DDClientState shareInstance] removeObserver:self
                                        forKeyPath:DD_NETWORK_STATE_KEYPATH];
     
     [[DDClientState shareInstance] removeObserver:self
                                        forKeyPath:DD_USER_STATE_KEYPATH];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"DDNotificationServerHeartBeat" object:nil];
 }
 
 #pragma mark KVO
@@ -87,14 +90,21 @@ static NSInteger const reloginTimeinterval = 1;
     {
         if ([DDClientState shareInstance].networkState != DDNetWorkDisconnect)
         {
+            [RecentUsersViewController shareInstance].title=@"Team Talk";
             //
-            BOOL shouldRelogin = !_reloginTimer && ![_reloginTimer isValid] && ! clientState.userState != DDUserOnline && clientState.userState != DDUserKickout && clientState.userState != DDUserOffLineInitiative;
+            BOOL shouldRelogin = !_reloginTimer && ![_reloginTimer isValid] && clientState.userState != DDUserOnline && clientState.userState != DDUserKickout && clientState.userState != DDUserOffLineInitiative;
+            
             if (shouldRelogin)
             {
+                NSLog(@"进入重连");
                 _reloginTimer = [NSTimer scheduledTimerWithTimeInterval:reloginTimeinterval target:self selector:@selector(p_onReloginTimer:) userInfo:nil repeats:YES];
                 _reloginInterval = 0;
                 [_reloginTimer fire];
             }
+        }else
+        {
+            [RecentUsersViewController shareInstance].title=@"连接失败";
+            
         }
     }
     //用户状态变化
@@ -103,23 +113,28 @@ static NSInteger const reloginTimeinterval = 1;
         switch ([DDClientState shareInstance].userState)
         {
             case DDUserKickout:
+                [RecentUsersViewController shareInstance].title=@"未连接";
                 [self p_stopCheckServerHeartBeat];
                 [self p_stopHeartBeat];
                 break;
             case DDUserOffLine:
+                [RecentUsersViewController shareInstance].title=@"未连接";
                 [self p_stopCheckServerHeartBeat];
                 [self p_stopHeartBeat];
                 [self p_startRelogin];
                 break;
             case DDUserOffLineInitiative:
+                [RecentUsersViewController shareInstance].title=@"未连接";
                 [self p_stopCheckServerHeartBeat];
                 [self p_stopHeartBeat];
                 break;
             case DDUserOnline:
+                [RecentUsersViewController shareInstance].title=@"Team Talk";
                 [self p_startCheckServerHeartBeat];
                 [self p_startHeartBeat];
                 break;
             case DDUserLogining:
+                [RecentUsersViewController shareInstance].title=@"收取中";
                 break;
         }
     }
@@ -170,6 +185,7 @@ static NSInteger const reloginTimeinterval = 1;
 //开启检验服务器端心跳的Timer
 - (void)p_startCheckServerHeartBeat
 {
+    //delete by kuaidao 20141022,In order to save mobile power,remove server heart beat
     if (!_serverHeartBeatTimer)
     {
         DDLog(@"begin maintenance _serverHeartBeatTimer");
@@ -193,7 +209,7 @@ static NSInteger const reloginTimeinterval = 1;
 {
     if (!_reloginTimer)
     {
-
+        
         _reloginTimer = [NSTimer scheduledTimerWithTimeInterval:reloginTimeinterval target:self selector:@selector(p_onReloginTimer:) userInfo:nil repeats:YES];
         [_reloginTimer fire];
     }
@@ -239,20 +255,48 @@ static NSInteger const reloginTimeinterval = 1;
     time ++;
     if (time >= _reloginInterval)
     {
+        
         [[LoginModule instance] reloginSuccess:^{
             [_reloginTimer invalidate];
             _reloginTimer = nil;
             time = 0;
             _reloginInterval = 0;
             powN = 0;
+            [RecentUsersViewController shareInstance].title=@"Team Talk";
+            [DDNotificationHelp postNotification:DDNotificationUserReloginSuccess userInfo:nil object:nil];
+            [DDClientState shareInstance].userState=DDUserOnline;
             DDLog(@"relogin success");
         } failure:^(NSString *error) {
             DDLog(@"relogin failure:%@",error);
-            powN ++;
-            time = 0;
-            _reloginInterval = pow(2, powN);
+            if ([error isEqualToString:@"未登录"]) {
+                [_reloginTimer invalidate];
+                _reloginTimer = nil;
+                time = 0;
+                _reloginInterval = 0;
+                powN = 0;
+                [RecentUsersViewController shareInstance].title=@"Team Talk";
+            }else{
+                [NetwrokStatusNotifyUI showErrorWithStatus:@"重新连接失败"];
+                [RecentUsersViewController shareInstance].title=@"未连接";
+                powN ++;
+                time = 0;
+                _reloginInterval = pow(2, powN);
+            }
+            
         }];
     }
 }
+-(void)startHeartBeatTimer
+{
+    [_serverHeartBeatTimer invalidate];
+    _serverHeartBeatTimer = nil;
+    //太久没收到服务器端数据包了
+    DDLog(@"太久没收到服务器端数据包了~");
+    [DDClientState shareInstance].userState = DDUserOffLine;
 
+}
+-(BOOL)heartBeatTimerIsValid
+{
+    return _serverHeartBeatTimer.isValid;
+}
 @end

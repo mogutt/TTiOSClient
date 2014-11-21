@@ -20,4 +20,5 @@ typedef void(^GetGroupInfoCompletion)(DDGroupEntity* group);
 - (void)getGroupInfogroupID:(NSString*)groupID completion:(GetGroupInfoCompletion)completion;
 -(NSArray*)getAllGroups;
 -(void)addRecentlyGroup:(NSArray *)array;
+-(void)saveRecentLyGroup;
 @end

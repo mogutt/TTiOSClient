@@ -8,6 +8,8 @@
 
 #import "RawAudioDataPlayer.h"
 
+static void AudioPlayerAQInputCallback(void *input, AudioQueueRef inQ, AudioQueueBufferRef outQB);
+
 @interface RawAudioDataPlayer()
 
 - (void)prepare;

@@ -8,24 +8,15 @@
 
 #import <Foundation/Foundation.h>
 
-@interface NSString (mogujieString)
+@interface NSString (TTString)
 
 +(NSString *)documentPath;
 +(NSString *)cachePath;
-+(NSString *)formatCurDate;
-+(NSString *)formatCurDay;
-+(NSString *)getAppVer;
++(NSString *)formatCurrentDate;
++(NSString *)formatCurrentDay;
 - (NSString*)removeAllSpace;
 - (NSURL *) toURL;
-- (BOOL) isEmail;
 - (BOOL) isEmpty;
-- (NSString *) escapeHTML;
-- (NSString *) unescapeHTML;
-- (NSString *) stringByRemovingHTML;
 - (NSString *) MD5;
-- (NSString * )URLEncode;
 -(NSString *)trim;
-
--(BOOL) isOlderVersionThan:(NSString*)otherVersion;
--(BOOL) isNewerVersionThan:(NSString*)otherVersion;
 @end

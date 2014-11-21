@@ -14,5 +14,6 @@
 @interface DDClientStateMaintenanceManager : NSObject
 
 + (instancetype)shareInstance;
-
+-(void)startHeartBeatTimer;
+-(BOOL)heartBeatTimerIsValid;
 @end

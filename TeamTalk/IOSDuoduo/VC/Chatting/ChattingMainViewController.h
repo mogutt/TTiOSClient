@@ -33,7 +33,7 @@
 @property (nonatomic, strong) UIRefreshControl* refreshControl;
 +(instancetype )shareInstance;
 
--(void)sendImageMessage:(Photo *)photo;
+-(void)sendImageMessage:(Photo *)photo Image:(UIImage *)image;
 /**
  *  任意页面跳转到聊天界面并开始一个会话
  *

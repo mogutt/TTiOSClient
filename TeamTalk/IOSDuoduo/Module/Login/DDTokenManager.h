@@ -9,8 +9,8 @@
 #import <Foundation/Foundation.h>
 
 @interface DDTokenManager : NSObject
-@property (nonatomic,retain)NSString* token;
-@property (nonatomic,retain)NSString* dao;
+@property (strong)NSString* token;
+@property (strong)NSString* dao;
 
 /**
  *  刷新token

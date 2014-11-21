@@ -48,8 +48,8 @@
 	_imageView = [[UIImageView alloc] initWithFrame: CGRectZero];
 	[self.contentView addSubview: _imageView];
 	self.selectImage = [[UIImageView alloc] initWithFrame:CGRectMake(50, 5, 20, 20)];
-    [self.selectImage setImage:[UIImage imageNamed:@"dd_preview_unselected"]];
-    [self.selectImage setHighlightedImage:[UIImage imageNamed:@"dd_preview_select"]];
+    [self.selectImage setImage:[UIImage imageNamed:@"unselected"]];
+    [self.selectImage setHighlightedImage:[UIImage imageNamed:@"select"]];
     [self.contentView addSubview:self.selectImage];
     self.title = [[UILabel alloc] initWithFrame:CGRectMake(0,self.frame.size.height+10, self.frame.size.width, 15)];
     [self.title setFont:[UIFont systemFontOfSize:14.0]];

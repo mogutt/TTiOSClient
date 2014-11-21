@@ -37,9 +37,9 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    self.title=@"预览";
     [self.view setBackgroundColor:[UIColor whiteColor]];
-    CGRect rect = self.view.frame;
-    self.gridView = [[AQGridView alloc] initWithFrame:CGRectMake(0, 0, 320, SYSTEM_VERSION_LESS_THAN(@"7")?rect.size.height-90:rect.size.height-110)];
+    self.gridView = [[AQGridView alloc] initWithFrame:CGRectMake(self.view.frame.origin.x, self.view.frame.origin.y, self.view.frame.size.width, self.view.frame.size.height-45)];
     self.gridView.delegate = self;
 	self.gridView.dataSource = self;
     [self.view addSubview:self.gridView];
@@ -57,7 +57,7 @@
     }];
     UIBarButtonItem *item = [[UIBarButtonItem alloc] initWithTitle:@"取消" style:UIBarButtonItemStyleDone target:self action:@selector(backToRoot)];
     self.navigationItem.rightBarButtonItem=item;
-    self.bar = [[AlbumDetailsBottomBar alloc] initWithFrame:CGRectMake(0, self.view.frame.size.height-70, 320, 45)];
+    self.bar = [[AlbumDetailsBottomBar alloc] initWithFrame:CGRectMake(0, self.view.frame.size.height-45, 320, 45)];
     __weak typeof(self) weakSelf = self;
     self.bar.Block=^(int buttonIndex){
         if (buttonIndex == 0) {
@@ -96,10 +96,9 @@
                             image =[[UIImage alloc]initWithCGImage:[[asset defaultRepresentation] fullScreenImage]];
                         }
                         NSString *keyName = [[PhotosCache sharedPhotoCache] getKeyName];
-                        NSData *photoData = UIImagePNGRepresentation(image);
-                        [[PhotosCache sharedPhotoCache] storePhoto:photoData forKey:keyName toDisk:YES];
+                        
                         photo.localPath=keyName;
-                        [[ChattingMainViewController shareInstance] sendImageMessage:photo];
+                        [[ChattingMainViewController shareInstance] sendImageMessage:photo Image:image];
                     }
                     
                 } completionBlock:^{
@@ -113,6 +112,7 @@
     // Do any additional setup after loading the view.
     [self.gridView scrollToItemAtIndex:[self.assetsArray count] atScrollPosition:AQGridViewScrollPositionBottom animated:NO];
 }
+
 - (void)dealloc
 {
     self.choosePhotosArray =nil;
@@ -124,7 +124,7 @@
 -(void)viewWillAppear:(BOOL)animated
 {
     [super viewWillAppear:animated];
-    
+        [self.tabBarController.tabBar setHidden:YES];
 }
 -(void)backToRoot
 {
@@ -151,6 +151,7 @@
 		cell = [[ImageGridViewCell alloc] initWithFrame: CGRectMake(0.0, 0.0, 75.0, 75.0) reuseIdentifier: PlainCellIdentifier];
         
 	}
+    cell.isShowSelect=YES;
     cell.selectionGlowColor=[UIColor clearColor];
     ALAsset *asset = [self.assetsArray objectAtIndex:index];
     

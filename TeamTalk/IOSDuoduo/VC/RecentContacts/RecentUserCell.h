@@ -10,11 +10,12 @@
 #import "DDGroupEntity.h"
 #import "DDUserEntity.h"
 @interface RecentUserCell : UITableViewCell
-@property (nonatomic,weak)IBOutlet UIImageView* avatarImageView;
-@property (nonatomic,weak)IBOutlet UILabel* nameLabel;
-@property (nonatomic,weak)IBOutlet UILabel* dateLabel;
-@property (nonatomic,weak)IBOutlet UILabel* lastmessageLabel;
-@property (nonatomic,weak)IBOutlet UILabel* unreadMessageCountLabel;
+@property (weak)IBOutlet UIImageView* avatarImageView;
+@property (weak)IBOutlet UILabel* nameLabel;
+@property (weak)IBOutlet UILabel* dateLabel;
+@property (weak)IBOutlet UILabel* lastmessageLabel;
+@property (weak)IBOutlet UILabel* unreadMessageCountLabel;
+@property (weak)IBOutlet UIImageView *onTopImage;
 @property (assign)NSInteger time_sort;
 - (void)setName:(NSString*)name;
 - (void)setTimeStamp:(NSUInteger)timeStamp;

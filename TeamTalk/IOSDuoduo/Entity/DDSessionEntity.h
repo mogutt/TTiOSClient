@@ -36,4 +36,6 @@ typedef enum
 - (id)initWithSessionID:(NSString*)sessionID type:(SessionType)type;
 - (void)updateUpdateTime:(NSUInteger)date;
 -(NSString *)getSessionGroupID;
+-(void)setSessionName:(NSString *)theName;
+-(BOOL)isGroup;
 @end

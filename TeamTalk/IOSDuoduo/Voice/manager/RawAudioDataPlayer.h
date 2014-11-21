@@ -31,7 +31,7 @@
 
 @property (nonatomic, assign) BOOL isDataInputOver;
 
-static void AudioPlayerAQInputCallback(void *input, AudioQueueRef inQ, AudioQueueBufferRef outQB);
+//static void AudioPlayerAQInputCallback(void *input, AudioQueueRef inQ, AudioQueueBufferRef outQB);
 
 - (void)startPlay;
 - (void)stopPlay;

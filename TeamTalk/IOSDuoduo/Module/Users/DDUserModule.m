@@ -20,7 +20,6 @@
 @implementation DDUserModule
 {
     NSMutableDictionary* _allUsers;
-    NSMutableArray* _recentUsers;
 }
 
 + (instancetype)shareInstance
@@ -39,7 +38,7 @@
     if (self)
     {
         _allUsers = [[NSMutableDictionary alloc] init];
-        _recentUsers = [[NSMutableArray alloc] init];
+        _recentUsers = [[NSMutableDictionary alloc] init];
         
 //        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(n_receiveUserLogoutNotification:) name:MGJUserDidLogoutNotification object:nil];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(n_receiveUserLoginNotification:) name:DDNotificationUserLoginSuccess object:nil];
@@ -74,12 +73,15 @@
         _allUsers = [[NSMutableDictionary alloc] init];
     }
     NSArray* allKeys = [_allUsers allKeys];
-    if (![allKeys containsObject:user.userId])
+    if (![allKeys containsObject:user.objID])
     {
-        [_allUsers setValue:user forKey:user.userId];
+        [_allUsers setValue:user forKey:user.objID];
     }
 }
-
+-(NSArray *)getAllMaintanceUser
+{
+    return [_allUsers allValues];
+}
 - (void )getUserForUserID:(NSString*)userID Block:(void(^)(DDUserEntity *user))block
 {
     if (_allUsers[userID]) {
@@ -97,20 +99,26 @@
 
 - (void)addRecentUser:(DDUserEntity*)user
 {
-    if (![_recentUsers containsObject:user])
+    if (!user)
     {
-        [_recentUsers addObject:user];
+        return;
+    }
+    if (!self.recentUsers)
+    {
+        self.recentUsers = [[NSMutableDictionary alloc] init];
+    }
+    NSArray* allKeys = [self.recentUsers allKeys];
+    if (![allKeys containsObject:user.objID])
+    {
+        [self.recentUsers setValue:user forKey:user.objID];
         [[DDDatabaseUtil instance] insertUsers:@[user] completion:^(NSError *error) {
             
         }];
     }
+   
 }
 
-- (void)moveUserIDToTopRecentUsers:(NSString*)userID
-{
-    [_recentUsers removeObject:userID];
-    [_recentUsers insertObject:userID atIndex:0];
-}
+
 - (void)loadAllRecentUsers:(DDLoadRecentUsersCompletion)completion
 {
     
@@ -140,13 +148,17 @@
 {
     NSMutableArray* users = [[NSMutableArray alloc] init];
     DDUserModule* userModule = [DDUserModule shareInstance];
-    [[userModule recentUsers] enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+    [[userModule recentUsers] enumerateKeysAndObjectsUsingBlock:^(id key, DDUserEntity *obj, BOOL *stop) {
         DDUserEntity* user = (DDUserEntity*)obj;
         [users addObject:user];
     }];
-    
     [[DDDatabaseUtil instance] updateContacts:users inDBCompletion:^(NSError *error) {
         
     }];
+}
+-(void)clearRecentUser
+{
+    DDUserModule* userModule = [DDUserModule shareInstance];
+    [[userModule recentUsers] removeAllObjects];
 }
 @end

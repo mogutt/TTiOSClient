@@ -47,7 +47,7 @@
         NSInteger userCnt = [dataInputStream readInt];
         DDLog(@"    **** 返回最近联系人列表,有%d个最近联系人.",userCnt);
         NSMutableArray* recentlyContactContent = [[NSMutableArray alloc] init];
-         dispatch_semaphore_t sema = dispatch_semaphore_create(0);
+        dispatch_semaphore_t sema = dispatch_semaphore_create(0);
         if (userCnt == 0) {
             dispatch_semaphore_signal(sema);
         }else
@@ -60,7 +60,7 @@
                     if (user) {
                         [recentlyContactContent addObject:user];
                     }
-
+                    
                 }];
                 if (userCnt == i+1) {
                     dispatch_semaphore_signal(sema);

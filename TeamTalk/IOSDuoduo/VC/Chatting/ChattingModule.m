@@ -68,17 +68,17 @@ static NSUInteger const showPromptGap = 300;
 - (float)messageHeight:(DDMessageEntity*)message
 {
     
-    if (message.msgType == DDMessageTypeText || message.msgType == DDGroup_Message_TypeText ) {
+    if (message.msgContentType == DDMessageTypeText ) {
         if (!_textCell)
         {
             _textCell = [[DDChatTextCell alloc] init];
         }
         return [_textCell cellHeightForMessage:message];
 
-    }else if (message.msgType == DDMessageTypeVoice || message.msgType == DDGroup_MessageTypeVoice)
+    }else if (message.msgContentType == DDMessageTypeVoice )
     {
         return 60;
-    }else if(message.msgType == DDMessageTypeImage)
+    }else if(message.msgContentType == DDMessageTypeImage)
     {
          return 151;
     }
@@ -116,7 +116,12 @@ static NSUInteger const showPromptGap = 300;
    // [_showingMessages addObjectsFromArray:messages];
     [[self mutableArrayValueForKeyPath:@"showingMessages"] addObjectsFromArray:messages];
 }
-
+-(void)getCurrentUser:(void(^)(DDUserEntity *))block
+{
+    [[DDDatabaseUtil instance] getUserFromID:self.sessionEntity.sessionID completion:^(DDUserEntity *user) {
+        block(user);
+    }];
+}
 - (void)requestServicesWithShopID:(NSString*)shopID type:(int)type completion:(DDReuestServiceCompletion)completion
 {
     DDAllotServiceAPI* allotServiceAPI = [[DDAllotServiceAPI alloc] init];
@@ -194,7 +199,7 @@ static NSUInteger const showPromptGap = 300;
 
 - (void)p_addHistoryMessages:(NSArray*)messages Completion:(DDChatLoadMoreHistoryCompletion)completion
 {
-    [[DDSundriesCenter instance] pushTaskToSerialQueue:^{
+//    [[DDSundriesCenter instance] pushTaskToSerialQueue:^{
         NSUInteger tempEarliestDate = 0;
         NSUInteger tempLasteestDate = 0;
         NSUInteger itemCount = [_showingMessages count];
@@ -219,25 +224,20 @@ static NSUInteger const showPromptGap = 300;
         
         if ([_showingMessages count] == 0)
         {
-            //[_showingMessages addObjectsFromArray:tempMessages];
             [[self mutableArrayValueForKeyPath:@"showingMessages"] addObjectsFromArray:tempMessages];
             _earliestDate = tempEarliestDate;
             _lastestDate = tempLasteestDate;
         }
         else
         {
-            //                if (_earliestDate - tempLasteestDate < showPromptGap && tempLasteestDate > 0)
-            //                {
-            //                    [_showingMessages removeObjectAtIndex:0];
-            //                }
             [_showingMessages insertObjects:tempMessages atIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, [tempMessages count])]];
             _earliestDate = tempEarliestDate;
         }
         NSUInteger newItemCount = [_showingMessages count];
-        dispatch_async(dispatch_get_main_queue(), ^{
+//        dispatch_async(dispatch_get_main_queue(), ^{
             completion(newItemCount - itemCount,nil);
-        });
-    }];
+//        });
+//    }];
 }
 
 @end

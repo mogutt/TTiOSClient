@@ -15,7 +15,7 @@ typedef void(^DDLoadRecentUsersCompletion)();
 @interface DDUserModule : NSObject
 
 @property (nonatomic,strong)NSString* currentUserID;
-@property (nonatomic,readonly)NSMutableArray* recentUsers;
+@property (nonatomic,strong)NSMutableDictionary* recentUsers;
 + (instancetype)shareInstance;
 
 //- (void)replaceUsers:(NSArray*)users;
@@ -23,7 +23,8 @@ typedef void(^DDLoadRecentUsersCompletion)();
 - (void )getUserForUserID:(NSString*)userID Block:(void(^)(DDUserEntity *user))block;
 - (void)addRecentUser:(DDUserEntity*)user;
 - (void)sortRecentUsers;
-- (void)moveUserIDToTopRecentUsers:(NSString*)userID;
 - (void)p_saveLocalRecentContacts;
 - (void)loadAllRecentUsers:(DDLoadRecentUsersCompletion)completion;
+-(void)clearRecentUser;
+-(NSArray *)getAllMaintanceUser;
 @end

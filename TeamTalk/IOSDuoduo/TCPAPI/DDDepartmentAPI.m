@@ -89,9 +89,9 @@
                                      @"isDelete":@(isDelete)
                                      };
             [array addObject:result];
-
+            
         }
-    
+        
         return array;
     };
     return analysis;
@@ -107,11 +107,11 @@
     Package package = (id)^(id object,uint32_t seqNo)
     {
         DDDataOutputStream *dataout = [[DDDataOutputStream alloc] init];
-        [dataout writeInt:IM_PDU_HEADER_LEN];
+        [dataout writeInt:0];
         [dataout writeTcpProtocolHeader:2
                                     cId:18
                                   seqNo:seqNo];
-    
+        [dataout writeDataCount];
         return [dataout toByteArray];
     };
     return package;

@@ -12,4 +12,5 @@
 @property(strong)UIImageView *personIcon;
 @property(strong)UILabel *name;
 @property(strong) UIButton *button;
+-(void)setContent:(NSString *)name AvatarImage:(NSString *)urlString;
 @end

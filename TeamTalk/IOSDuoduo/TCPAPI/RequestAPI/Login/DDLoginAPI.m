@@ -91,21 +91,21 @@
             NSString *email = [bodyData readUTF];
             NSString *token = [bodyData readUTF];
             result = @{@"serverTime":@(serverTime),
-                                     @"result":@(loginResult),
-                                     @"state":@(onlineStatus),
-                                     @"nickName":nickName,
-                                     @"userId":userId,
-                                     @"title":title,
-                                     @"position":position,
-                                     @"isDeleted":@(isDeleted),
-                                     @"sex":@(sex),
-                                     @"departId":departId,
-                                     @"jobNum":@(jobNum),
-                                     @"telphone":telphone,
-                                     @"avatar":avatar,
-                                     @"email":email,
-                                     @"token":token,
-                                     };
+                       @"result":@(loginResult),
+                       @"state":@(onlineStatus),
+                       @"nickName":nickName,
+                       @"userId":userId,
+                       @"title":title,
+                       @"position":position,
+                       @"isDeleted":@(isDeleted),
+                       @"sex":@(sex),
+                       @"departId":departId,
+                       @"jobNum":@(jobNum),
+                       @"telphone":telphone,
+                       @"avatar":avatar,
+                       @"email":email,
+                       @"token":token,
+                       };
             return result;
         }
         
@@ -129,8 +129,7 @@
         NSString *clientVersion = @"1.1";
         NSInteger status = [array[2] intValue];
         NSInteger clientType = [array[3] intValue];
-        uint32_t totalLen = strLen(userID)+strLen(password)+strLen(clientVersion)+IM_PDU_HEADER_LEN + 4 * 5;
-        [dataout writeInt:totalLen];
+        [dataout writeInt:0];
         [dataout writeTcpProtocolHeader:DDSERVICE_LOGIN
                                     cId:DDCMD_LOGIN_REQ_USERLOGIN
                                   seqNo:seqNo];
@@ -139,6 +138,7 @@
         [dataout writeInt:(uint32_t)status];
         [dataout writeInt:(uint32_t)clientType];
         [dataout writeUTF:clientVersion];
+        [dataout writeDataCount];
         return [dataout toByteArray];
     };
     return package;

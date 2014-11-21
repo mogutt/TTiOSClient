@@ -43,14 +43,6 @@
     return nil;
 }
 
-- (NSString*)unescapeStringForKey:(id)key{
-    NSString *string = [self safeObjectForKey:key];
-    if ([string isKindOfClass:[NSString class]]) {
-        return [string unescapeHTML];
-    }
-    return nil;
-}
-
 
 @end
 

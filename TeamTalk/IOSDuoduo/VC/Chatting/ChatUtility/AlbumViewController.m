@@ -26,14 +26,14 @@
 -(void)viewWillAppear:(BOOL)animated
 {
     [super viewWillAppear:animated];
-
+    [self.tabBarController.tabBar setHidden:YES];
 }
 - (void)viewDidLoad
 {
     [super viewDidLoad];
     self.albumsArray = [NSMutableArray new];
     self.assetsLibrary =  [[ALAssetsLibrary alloc] init];
-    UITableView *tableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height)];
+    UITableView *tableView = [[UITableView alloc] initWithFrame:self.view.frame];
     tableView.delegate=self;
     tableView.dataSource=self;
     [self.view addSubview:tableView];

@@ -91,24 +91,26 @@ static NSString * const ItemCellIdentifier = @"ItemCellIdentifier";
 }
 - (void) gridView: (AQGridView *) gridView didSelectItemAtIndex: (NSUInteger) index
 {
+    
     self.imagePicker = [[UIImagePickerController alloc] init];
-    self.imagePicker.delegate = self;
     self.imagePicker.delegate = self;
     [gridView deselectItemAtIndex:index animated:YES];
 	UtililyItemCell * cell = (UtililyItemCell *)[self.gridView cellForItemAtIndex: index];
 	if ([cell.title.text isEqualToString:@"拍摄"]) {
-        self.imagePicker.sourceType = UIImagePickerControllerSourceTypeCamera;
-        self.imagePicker.modalTransitionStyle = UIModalTransitionStyleCoverVertical;
-        self.imagePicker.allowsEditing=NO;
-        self.imagePicker.wantsFullScreenLayout=YES;
-        self.imagePicker.allowsEditing = YES;
-        [self.navigationController presentViewController:self.imagePicker animated:YES completion:^{
-        }];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if ([UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera])
+            {
+                            self.imagePicker.sourceType = UIImagePickerControllerSourceTypeCamera;
+            }
+            self.imagePicker.modalTransitionStyle = UIModalTransitionStyleCoverVertical;
+            self.imagePicker.wantsFullScreenLayout=YES;
+            [[ChattingMainViewController shareInstance].navigationController presentViewController:self.imagePicker animated:NO completion:nil];
+        });
+       
     }else if ([cell.title.text isEqualToString:@"照片"])
     {
         self.imagePicker.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
         self.imagePicker.modalTransitionStyle = UIModalTransitionStyleCoverVertical;
-        self.imagePicker.allowsEditing = YES;
                 [self.navigationController pushViewController:[AlbumViewController new] animated:YES];
         
     }
@@ -117,15 +119,15 @@ static NSString * const ItemCellIdentifier = @"ItemCellIdentifier";
 - (void) imagePickerControllerDidCancel: (UIImagePickerController *) picker
 {
     
-    [picker dismissViewControllerAnimated:YES completion:^{
-        
-    }];
+    [picker dismissViewControllerAnimated:YES completion:nil];
+      self.imagePicker=nil;
 }
 -(void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info{
     NSLog(@"Picker returned successfully.");
     NSLog(@"%@", info);
     NSString *mediaType = [info objectForKey:UIImagePickerControllerMediaType];
     if ([mediaType isEqualToString:( NSString *)kUTTypeImage]){
+  
         __block UIImage *theImage = nil;
         if ([picker allowsEditing]){
             theImage = [info objectForKey:UIImagePickerControllerEditedImage];
@@ -133,29 +135,30 @@ static NSString * const ItemCellIdentifier = @"ItemCellIdentifier";
             theImage = [info objectForKey:UIImagePickerControllerOriginalImage];
             
         }
-        ALAssetsLibrary *assetsLibrary = [[ALAssetsLibrary alloc] init];
-        [assetsLibrary writeImageToSavedPhotosAlbum:[theImage CGImage] orientation:(ALAssetOrientation)theImage.imageOrientation completionBlock:^(NSURL *assetURL, NSError *error) {
-            NSLog(@"pickImage======%@",[assetURL absoluteString]);
-            Photo *photo = [Photo new];
+        UIImage *image = [self scaleImage:theImage toScale:0.3];
+        NSData *imageData = UIImageJPEGRepresentation(image, (CGFloat)1.0);
+        UIImage * m_selectImage = [UIImage imageWithData:imageData];
+            __block Photo *photo = [Photo new];
             NSString *keyName = [[PhotosCache sharedPhotoCache] getKeyName];
-            NSData *photoData = UIImagePNGRepresentation(theImage);
-            [[PhotosCache sharedPhotoCache] storePhoto:photoData forKey:keyName toDisk:YES];
             photo.localPath=keyName;
-            [[ChattingMainViewController shareInstance] sendImageMessage:photo];
-        }];
+        [picker dismissViewControllerAnimated:NO completion:nil];
+        self.imagePicker=nil;
+            [[ChattingMainViewController shareInstance] sendImageMessage:photo Image:m_selectImage];
+        
         
     }
-    [picker dismissModalViewControllerAnimated:YES];
-}
-- (void) imageWasSavedSuccessfully:(UIImage *)paramImage didFinishSavingWithError:(NSError *)paramError contextInfo:(void *)paramContextInfo{
-    if (paramError == nil){
-        NSLog(@"Image was saved successfully.");
-    } else {
-        NSLog(@"An error happened while saving the image.");
-        NSLog(@"Error = %@", paramError);
-    }
-}
 
+}
+#pragma mark -
+#pragma mark 等比縮放image
+- (UIImage *)scaleImage:(UIImage *)image toScale:(float)scaleSize
+{
+    UIGraphicsBeginImageContext(CGSizeMake(image.size.width*scaleSize, image.size.height*scaleSize));
+    [image drawInRect:CGRectMake(0, 0, image.size.width * scaleSize, image.size.height * scaleSize)];
+    UIImage *scaledImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return scaledImage;
+}
 - (void)didReceiveMemoryWarning
 {
     [super didReceiveMemoryWarning];

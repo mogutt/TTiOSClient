@@ -18,22 +18,24 @@
 #import "DDDatabaseUtil.h"
 #import "LoginModule.h"
 #import "DDClientState.h"
+#import "RuntimeStatus.h"
 #import "DDUserModule.h"
 #import "DDRecentGroupAPI.h"
 #import "DDUnreadMessageGroupAPI.h"
 #import "DDGroupsUnreadMessageAPI.h"
 #import "DDGroupModule.h"
 #import "DDFixedGroupAPI.h"
+#import "SearchContentViewController.h"
+#import "MBProgressHUD.h"
 @interface RecentUsersViewController ()
 @property(strong)UISearchDisplayController * searchController;
 @property(strong)NSMutableArray *items;
-
+@property(strong)MBProgressHUD *hud;
+@property(strong)NSMutableDictionary *lastMsgs;
 @property(strong)UISearchBar *bar;
 - (void)n_receiveStartLoginNotification:(NSNotification*)notification;
 - (void)n_receiveLoginSuccessNotification:(NSNotification*)notification;
 - (void)n_receiveLoginFailureNotification:(NSNotification*)notification;
-- (void)n_receiveMessageNotification:(NSNotification*)notification;
-- (void)n_receiveUnreadMessageUpdateNotification:(NSNotification*)notification;
 - (void)n_receiveRecentContactsUpdateNotification:(NSNotification*)notification;
 - (void)n_receiveUserKickOffNotification:(NSNotification*)notification;
 @end
@@ -55,21 +57,7 @@
     self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
     if (self) {
         // Custom initialization
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(n_receiveStartLoginNotification:) name:DDNotificationStartLogin object:nil];
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(n_receiveLoginFailureNotification:) name:DDNotificationUserLoginFailure object:nil];
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(n_receiveLoginSuccessNotification:) name:DDNotificationUserLoginSuccess object:nil];
-        
-        [[NSNotificationCenter defaultCenter] addObserver:self
-                                                 selector:@selector(n_receiveMessageNotification:)
-                                                     name:DDNotificationReceiveMessage
-                                                   object:nil];
-        
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(n_receiveRecentContactsUpdateNotification:) name:DDNotificationRecentContactsUpdate object:nil];
-        
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(n_receiveUnreadMessageUpdateNotification:) name:DDNotificationUpdateUnReadMessage object:nil];
-        
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(n_receiveUserKickOffNotification:) name:DDNotificationUserKickouted object:nil];
-        
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(n_receiveLoginFailureNotification:) name:DDNotificationUserLoginFailure object:nil];
     }
     return self;
 }
@@ -82,65 +70,61 @@
         self.extendedLayoutIncludesOpaqueBars = NO;
     }
     [super viewDidLoad];
+//    self.hud = [[MBProgressHUD alloc] initWithView:self.view];
+//    [self.view addSubview:self.hud];
+//    self.hud.dimBackground = YES;
+//    self.hud.labelText=@"正在加载...";
+//    [self.hud show:YES];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(n_receiveUnreadMessageUpdateNotification:) name:DDNotificationUpdateUnReadMessage object:nil];
     self.items = [NSMutableArray new];
     [_tableView setFrame:self.view.frame];
-//    [self addNavigationBar];
-       self.title=@"Team Talk";
+      UISearchBar *searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 40)];
+    searchBar.placeholder=@"搜索";
+    [searchBar.layer setBorderWidth:0];
+    [searchBar setBarTintColor:RGB(242, 242, 244)];
+    searchBar.delegate=self;
+    _tableView.tableHeaderView=searchBar;
+    self.title=@"Team Talk";
+   self.tableView.contentOffset = CGPointMake(0, CGRectGetHeight(searchBar.bounds));
+    [self.tableView setContentInset:UIEdgeInsetsMake(0, 0, 0, 0)];
+[self.tableView setBackgroundColor:RGB(239,239,244)];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(refreshData) name:@"RefreshRecentData" object:nil];
+    self.lastMsgs = [NSMutableDictionary new];
+    self.module = [RecentUserVCModule new];
+    self.items=self.module.items;
    
-    [self.tableView setContentInset:UIEdgeInsetsMake(-3, 0, 0, 0)];
-    [self loadRecentUserAndGroup];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(sentMessageSuccessfull:) name:@"SentMessageSuccessfull" object:nil];
-   
-  
+    
 }
+
+-(void)refreshData
+{
+    //[self.hud removeFromSuperview];
+    [self.tableView reloadData];
+    [self setToolbarBadge];
+}
+
 -(void)setToolbarBadge
 {
     NSInteger count = [[DDMessageModule shareInstance] getUnreadMessgeCount];
+
     if (count !=0) {
-         [self.parentViewController.tabBarItem setBadgeValue:[NSString stringWithFormat:@"%d",count]];
-    }
-   
-}
--(void)sentMessageSuccessfull:(NSNotification *)notification
-{
-    NSString *senderID = [notification object];
-    __block BOOL isInsert = NO;
-    [self.items enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-        DDBaseEntity *base = (DDBaseEntity *)obj;
-        if ([base isKindOfClass:[DDGroupEntity class]]) {
-            DDGroupEntity *group = (DDGroupEntity *)obj;
-            if ([senderID isEqualToString:group.groupId]) {
-                [self.items removeObject:obj];
-                [self.items insertObject:obj atIndex:0];
-                isInsert = YES;
-                [self.tableView reloadData];
-            }
-        }else
+        if (count > 99)
         {
-            DDUserEntity *user = (DDUserEntity *)obj;
-            if ([senderID isEqualToString:user.userId]) {
-                [self.items removeObject:obj];
-                [self.items insertObject:obj atIndex:0];
-                isInsert=YES;
-                [self.tableView reloadData];
-            }
+            [self.parentViewController.tabBarItem setBadgeValue:@"99+"];
+
         }
-    }];
-    if (!isInsert) {
-        DDGroupEntity *group = [[DDGroupModule instance] getGroupByGId:senderID];
-        if (group) {
-             [self.items insertObject:group atIndex:0];
-             [self.tableView reloadData];
-        }else
+        else
         {
-            [[DDUserModule shareInstance] getUserForUserID:senderID Block:^(DDUserEntity *user) {
-                 [self.items insertObject:user atIndex:0];
-                 [self.tableView reloadData];
-            }];
+            [self.parentViewController.tabBarItem setBadgeValue:[NSString stringWithFormat:@"%ld",count]];
+
         }
+
+    }else
+    {
+        [self.parentViewController.tabBarItem setBadgeValue:nil];
     }
-  
 }
+
 
 -(void)searchContact
 {
@@ -149,8 +133,7 @@
 - (void)viewWillAppear:(BOOL)animated
 {
     [super viewWillAppear:animated];
-     [self setToolbarBadge];
-    [self.tabBarController.tabBar setHidden:NO];
+    [self setToolbarBadge];
 
 }
 
@@ -158,6 +141,8 @@
 - (void)viewDidAppear:(BOOL)animated
 {
     [super viewDidAppear:animated];
+    //[self.tableView reloadData];
+    [self.tabBarController.tabBar setHidden:NO];
 }
 
 - (void)didReceiveMemoryWarning
@@ -248,20 +233,20 @@
         [tableView registerNib:nib forCellReuseIdentifier:cellIdentifier];
         cell = (RecentUserCell*)[tableView dequeueReusableCellWithIdentifier:cellIdentifier];
     }
+    
+    UIView *view = [[UIView alloc] initWithFrame:cell.bounds];
+    view.backgroundColor=RGB(229, 229, 229);
+    cell.selectedBackgroundView=view;
     NSInteger row = [indexPath row];
     if ([self.items[row] isKindOfClass:[DDUserEntity class]]) {
         DDUserEntity* user = self.items[row];
-        UIView *view = [[UIView alloc] initWithFrame:cell.bounds];
-        view.backgroundColor=RGB(246, 93, 137);
-        cell.selectedBackgroundView=view;
         [cell setShowUser:user];
-        
+      
     }else
     {
         DDGroupEntity *group = self.items[row];
         [cell setShowGroup:group];
         [cell setName:group.name];
-       
     }
        return cell;
 }
@@ -269,265 +254,87 @@
 #pragma mark - UITableView Delegate
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
     NSInteger row = [indexPath row];
     
     RecentUserCell* cell = (RecentUserCell*)[tableView cellForRowAtIndexPath:indexPath];
     [cell setUnreadMessageCount:0];
     if ([self.items[row] isKindOfClass:[DDUserEntity class]]) {
         DDUserEntity* userID = self.items[row];
-        DDSessionEntity* session = [[DDSessionEntity alloc] initWithSessionID:userID.userId type:SESSIONTYPE_SINGLE];
+        DDSessionEntity* session = [[DDSessionEntity alloc] initWithSessionID:userID.objID type:SESSIONTYPE_SINGLE];
         [[ChattingMainViewController shareInstance] showChattingContentForSession:session];
         [self.navigationController pushViewController:[ChattingMainViewController shareInstance] animated:YES];
     }else
     {
         DDGroupEntity *group = self.items[row];
-        DDSessionEntity* session = [[DDSessionEntity alloc] initWithSessionID:group.groupId type:SESSIONTYPE_TEMP_GROUP];
+        DDSessionEntity* session = [[DDSessionEntity alloc] initWithSessionID:group.objID type:SESSIONTYPE_TEMP_GROUP];
         [[ChattingMainViewController shareInstance] showChattingContentForSession:session];
         [self.navigationController pushViewController:[ChattingMainViewController shareInstance] animated:YES];
     }
 }
 
-#pragma mark - PrivateAPI
-- (void)n_receiveStartLoginNotification:(NSNotification*)notification
+
+-(void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    [self showLinking];
+    NSUInteger row = [indexPath row];
+    DDBaseEntity *entity = self.items[row];
+    if ([entity isKindOfClass:[DDUserEntity class]]) {
+        DDUserEntity *temp =(DDUserEntity *)entity;
+        if ([TheRuntime isInFixedTop:temp.objID]) {
+            [TheRuntime removeFromFixedTop:temp.objID];
+        }else
+        {
+            [TheRuntime insertToFixedTop:temp.objID];
+        }
+       
+    }else
+    {
+        DDGroupEntity *group = (DDGroupEntity *)entity;
+        if ([TheRuntime isInFixedTop:group.objID]) {
+            [TheRuntime removeFromFixedTop:group.objID];
+        }else
+        {
+         [TheRuntime insertToFixedTop:group.objID];
+        }
+    }
+    [tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationRight];
+}
+- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath{
+    return YES;
 }
 
-- (void)n_receiveLoginSuccessNotification:(NSNotification*)notification
-{
-    //self.title = @"最近联系人";
+- (NSString *)tableView:(UITableView *)tableView titleForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath *)indexPath{
+    NSUInteger row = [indexPath row];
+    DDBaseEntity *entity = self.items[row];
+    if ([entity isKindOfClass:[DDUserEntity class]]) {
+        DDUserEntity *temp =(DDUserEntity *)entity;
+        if ([TheRuntime isInFixedTop:temp.objID]) {
+            return @"取消置顶";
+        }
+    }else
+    {
+        DDGroupEntity *group = (DDGroupEntity *)entity;
+        if ([TheRuntime isInFixedTop:group.objID]) {
+            return @"取消置顶";
+        }
+    }
+    return @"置顶";
 }
-
+- (BOOL)searchBarShouldBeginEditing:(UISearchBar *)searchBar
+{
+    [self.navigationController pushViewController:[SearchContentViewController new] animated:YES];
+    return NO;
+}
+- (void)n_receiveUnreadMessageUpdateNotification:(NSNotification*)notification
+{
+    [self.tableView reloadData];
+}
 - (void)n_receiveLoginFailureNotification:(NSNotification*)notification
 {
     self.title = @"未连接";
-
 }
-
-- (void)n_receiveMessageNotification:(NSNotification*)notification
+- (void)n_receiveStartLoginNotification:(NSNotification*)notification
 {
-    
-    DDMessageEntity* message = [notification object];
-    if (message.msgType == DDGroup_Message_TypeText || message.msgType == DDGroup_MessageTypeVoice) {
-        [self.items enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-            if ([obj isKindOfClass:[DDGroupEntity class]]) {
-                DDGroupEntity *group = (DDGroupEntity *)obj;
-                if ([message.toUserID isEqualToString:group.groupId]) {
-                        [self.items removeObject:obj];
-                        [self.items insertObject:obj atIndex:0];
-                        [self.tableView reloadData];
-                    }
-                
-            }
-        }];
-    }else
-    {
-        __block BOOL isInsert = NO;
-        [self.items enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-            if ([obj isKindOfClass:[DDUserEntity class]]) {
-                DDUserEntity *user = (DDUserEntity *)obj;
-                if ([message.senderId isEqualToString:user.userId]) {
-                    isInsert = YES;
-                    [self.items removeObject:obj];
-                    [self.items insertObject:obj atIndex:0];
-                    [self.tableView reloadData];
-                }
-            }
-        }];
-        if (!isInsert) {
-            [[DDUserModule shareInstance] getUserForUserID:message.senderId Block:^(DDUserEntity *user) {
-                if (user) {
-                    [self.items insertObject:user atIndex:0];
-                    [self.tableView reloadData];
-                }
-            }];
-        }
-
-    }
-     [self setToolbarBadge];
-    [self.tableView reloadData];
-}
-
-- (void)n_receiveUnreadMessageUpdateNotification:(NSNotification*)notification
-{
-
-    NSString *senderID = [notification object];
-    NSString *newID = [senderID componentsSeparatedByString:@"_"][1];
-    if ([senderID hasPrefix:@"user_"]) {
-        
-        __block BOOL hadUserInItems =NO;
-        [self.items enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-            if ([obj isKindOfClass:[DDUserModule class]]) {
-                DDUserEntity *user = (DDUserEntity *)obj;
-                if ([user.userId isEqualToString:newID]) {
-                    hadUserInItems=YES;
-                    [self.tableView reloadData];
-                }
-            }
-        }];
-        if (!hadUserInItems) {
-            [[DDUserModule shareInstance] getUserForUserID:newID Block:^(DDUserEntity *user) {
-                if (user) {
-                    [self.items insertObject:user atIndex:0];
-                    [self.tableView reloadData];
-                }
-            }];
-        }
-    }else
-    {
-        __block BOOL hadUserInItems =NO;
-        [self.items enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-            if ([obj isKindOfClass:[DDGroupEntity class]]) {
-                DDGroupEntity *group = (DDGroupEntity *)obj;
-                if ([group.groupId isEqualToString:newID]) {
-                    hadUserInItems=YES;
-                    [self.items replaceObjectAtIndex:0 withObject:group];
-                    [self.tableView reloadData];
-                }
-            }
-        }];
-        if (!hadUserInItems) {
-           DDGroupEntity *group= [[DDGroupModule instance]getGroupByGId:newID];
-            if (group) {
-                [self.items insertObject:group atIndex:0];
-                [self.tableView reloadData];
-            }
-            
-        }
-
-    }
-   
-
-}
-
-- (void)n_receiveRecentContactsUpdateNotification:(NSNotification*)notification
-{
-//    [self.module loadRecentContacts:^{
-//        [self p_reloadRecentUserTableView:^(bool isFinish) {
-//            if (isFinish) {
-//                [self sortItems];
-//            }
-//        }];
-//    }];
-
-}
-
-- (void)n_receiveUserKickOffNotification:(NSNotification*)notification
-{
-    if ([self.navigationController.topViewController isEqual:self])
-    {
-        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil message:@"您的帐号在别处登录" delegate:self cancelButtonTitle:nil otherButtonTitles:@"重连", nil];
-        [alert show];
-    }
-}
-
-
-- (void)p_reloadRecentUserTableView:(void(^)(bool isFinish))block
-{
-    [[DDSundriesCenter instance] pushTaskToSerialQueue:^{
-        dispatch_async(dispatch_get_main_queue(), ^{
-            NSMutableArray *temp = [NSMutableArray new];
-            [[[DDUserModule shareInstance] recentUsers] enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-                NSUInteger unreadMessageCount = [[DDMessageModule shareInstance] getUnreadMessageCountForSessionID:obj];
-                if (unreadMessageCount !=0) {
-                    [temp addObject:obj];
-                }
-            }];
-            if ([temp count] !=0) {
-                [[[DDUserModule shareInstance] recentUsers] removeObjectsInArray:temp];
-                [temp enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-                    [[[DDUserModule shareInstance] recentUsers] insertObject:obj atIndex:0];
-                }];
-            }
-            [self.items removeObjectsInArray:[[DDUserModule shareInstance] recentUsers]];
-            [self.items addObjectsFromArray:[[DDUserModule shareInstance] recentUsers]];
-            [self.items addObjectsFromArray:[[DDGroupModule instance].recentlyGroup allValues]];
-            block(YES);
-        });
-    }];
-}
-
-
--(void)sortItems
-{
-    NSSortDescriptor *sortDescriptor = [[NSSortDescriptor alloc] initWithKey:@"_lastUpdateTime" ascending:NO];
-    [self.items sortUsingDescriptors:[NSArray arrayWithObject:sortDescriptor]];
-     [self.tableView reloadData];
-   
-
-}
--(void)loadRecentUserAndGroup
-{
-    [self.items addObjectsFromArray:[[[DDGroupModule instance] recentlyGroup] allValues]];
-    [self.items addObjectsFromArray:[[DDUserModule shareInstance] recentUsers]];
-    [self sortItems];
-    dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-    dispatch_group_t group = dispatch_group_create();
-    dispatch_group_enter(group);
-    dispatch_async(queue, ^{
-        
-        [[DDDatabaseUtil instance] loadContactsCompletion:^(NSArray *contacts, NSError *error) {
-                [contacts enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-                    DDUserEntity* user = (DDUserEntity*)obj;
-                    
-                    [[DDUserModule shareInstance] addRecentUser:user];
-                    [[DDUserModule shareInstance] addMaintanceUser:user];
-                }];
-            dispatch_group_leave(group);
-        }];
-        
-        //加载网络最近联系人
-        dispatch_group_enter(group);
-        [[DDSundriesCenter instance] pushTaskToSerialQueue:^{
-            RecentConactsAPI* recentContactsAPI = [[RecentConactsAPI alloc] init];
-            [recentContactsAPI requestWithObject:recentContactsAPI Completion:^(id response, NSError *error) {
-                if (!error)
-                {
-                        NSMutableArray* recentContacts = (NSMutableArray*)response;
-                        [recentContacts enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-                            DDUserEntity* user = (DDUserEntity*)obj;
-                            [[DDUserModule shareInstance] addRecentUser:user];
-                            [[DDUserModule shareInstance] addMaintanceUser:user];
-                        }];
-                        [[DDUserModule shareInstance] p_saveLocalRecentContacts];
-                }
-                else
-                {
-                    DDLog(@"load recentUsers failure error:%@",error.domain);
-                }
-                   dispatch_group_leave(group);
-            }];
-        }];
-    });
-    dispatch_group_enter(group);
-    DDRecentGroupAPI *recentGroup = [[DDRecentGroupAPI alloc] init];
-    [recentGroup requestWithObject:nil Completion:^(id response, NSError *error) {
-        if (response) {
-            [[DDGroupModule instance] addRecentlyGroup:response];
-            
-        }
-        dispatch_group_leave(group);
-    }];
-    //获取固定群
-    dispatch_group_enter(group);
-    DDFixedGroupAPI *fixedGroup = [[DDFixedGroupAPI alloc] init];
-    [fixedGroup requestWithObject:nil Completion:^(id response, NSError *error) {
-        if (response) {
-            NSArray *groups = (NSArray *)response;
-            
-            [groups enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-                DDGroupEntity *group =(DDGroupEntity *)obj;
-                [[DDGroupModule instance] addGroup:group];
-            }];
-            
-        }
-        dispatch_group_leave(group);
-    }];
-    dispatch_group_notify(group, dispatch_get_main_queue(), ^{
-        [self.items addObjectsFromArray:[[[DDGroupModule instance] recentlyGroup] allValues]];
-        [self.items addObjectsFromArray:[[DDUserModule shareInstance] recentUsers]];
-        [self sortItems];
-    });
-
+     self.title = @"Team Talk";
 }
 @end

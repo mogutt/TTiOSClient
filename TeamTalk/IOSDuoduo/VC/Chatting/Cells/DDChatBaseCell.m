@@ -9,13 +9,17 @@
 #import "DDChatBaseCell.h"
 #import "UIView+DDAddition.h"
 #import "DDUserModule.h"
+#import "ChattingMainViewController.h"
 #import "PublicProfileViewControll.h"
 #import <UIImageView+WebCache.h>
 CGFloat const dd_avatarEdge = 5.0;                 //头像到边缘的距离
 CGFloat const dd_avatarBubbleGap = 10;             //头像和气泡之间的距离
 //CGFloat const dd_bubbleGap = 10;                   //气泡到非头像这边的距离
 CGFloat const dd_bubbleUpDown = 10;                //气泡到上下边缘的距离
+@interface DDChatBaseCell ()
+@property(copy)NSString *currentUserID;
 
+@end
 @implementation DDChatBaseCell
 
 - (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
@@ -27,6 +31,7 @@ CGFloat const dd_bubbleUpDown = 10;                //气泡到上下边缘的距
         [self setBackgroundColor:[UIColor clearColor]];
         
         self.userAvatar = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 40, 40)];
+        [self.userAvatar setUserInteractionEnabled:YES];
         [self.contentView addSubview:self.userAvatar];
         self.userName =[[UILabel alloc] initWithFrame:CGRectMake(60, 10, 100, 15)];
         [self.userName setBackgroundColor:[UIColor clearColor]];
@@ -52,10 +57,21 @@ CGFloat const dd_bubbleUpDown = 10;                //气泡到上下边缘的距
         [self.contentView setAutoresizesSubviews:NO];
         UITapGestureRecognizer *pan = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(clickTheSendAgain)];
         [self.sendFailuredImageView addGestureRecognizer:pan];
+        UITapGestureRecognizer *openProfile = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(openProfilePage)];
+        [self.userAvatar addGestureRecognizer:openProfile];
     }
     return self;
 }
-
+-(void)openProfilePage
+{
+    if (self.currentUserID) {
+        [[DDUserModule shareInstance] getUserForUserID:self.currentUserID Block:^(DDUserEntity *user) {
+            PublicProfileViewControll *public = [PublicProfileViewControll new];
+            public.user=user;
+                [[ChattingMainViewController shareInstance].navigationController pushViewController:public animated:YES];
+        }];
+    }
+}
 -(void)clickTheSendAgain
 {
     UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"重发" message:@"是否重新发送此消息" delegate:self cancelButtonTitle:@"取消" otherButtonTitles:@"确定", nil];
@@ -93,11 +109,13 @@ CGFloat const dd_bubbleUpDown = 10;                //气泡到上下边缘的距
     [self.userAvatar setContentMode:UIViewContentModeScaleAspectFill];
     [self.userAvatar setClipsToBounds:YES];
     [self.userAvatar setTop:dd_bubbleUpDown];
-
+    self.currentUserID=content.senderId;
     [[DDUserModule shareInstance] getUserForUserID:content.senderId Block:^(DDUserEntity *user) {
-        NSURL* avatarURL = [NSURL URLWithString:user.avatar];
-         [self.userAvatar setImageWithURL:avatarURL placeholderImage:[UIImage imageNamed:@"user_placeholder"]];
-        [self.userName setText:user.nick];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSURL* avatarURL = [NSURL URLWithString:user.avatar];
+            [self.userAvatar sd_setImageWithURL:avatarURL placeholderImage:[UIImage imageNamed:@"user_placeholder"]];
+            [self.userName setText:user.name];
+        });
     }];
     
     
@@ -167,7 +185,7 @@ CGFloat const dd_bubbleUpDown = 10;                //气泡到上下边缘的距
     self.sendFailuredImageView.centerY = self.bubbleImageView.centerY;
     
     //设置菜单
-    switch (content.msgType) {
+    switch (content.msgContentType) {
         case DDMessageTypeImage:
             showMenu = showMenu | DDShowPreview;
             break;
@@ -177,12 +195,7 @@ CGFloat const dd_bubbleUpDown = 10;                //气泡到上下边缘的距
         case DDMessageTypeVoice:
             showMenu = showMenu | DDShowEarphonePlay | DDShowSpeakerPlay;
             break;
-        case DDGroup_Message_TypeText:
-            showMenu = showMenu | DDShowPreview;
-            break;
-        case DDGroup_MessageTypeVoice:
-            showMenu = showMenu | DDShowEarphonePlay | DDShowSpeakerPlay;
-            break;
+
     }
     [self.bubbleImageView setShowMenu:showMenu];
     

@@ -43,6 +43,7 @@ typedef void(^DDChatLoadMoreHistoryCompletion)(NSUInteger addcount, NSError* err
 
 - (void)clearChatData;
 - (void)showMessagesAddCommodity:(DDMessageEntity*)message;
+-(void)getCurrentUser:(void(^)(DDUserEntity *))block;
 @end
 
 

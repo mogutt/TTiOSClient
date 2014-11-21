@@ -11,7 +11,6 @@
 @interface LoginModule : NSObject
 {
     DDHttpServer* _httpServer;
-    DDTokenManager* _tokenServer;
     DDMsgServer* _msgServer;
     DDTcpServer* _tcpServer;
     DDLoginServer* _loginServer;

@@ -18,21 +18,17 @@
     self = [super initWithFrame:frame];
     if (self) {
         // Initialization code
-        self.personIcon = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 25, 25)];
+        self.personIcon = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, frame.size.width, 35)];
         [self.contentView addSubview:self.personIcon];
-        self.name = [[UILabel alloc] initWithFrame:CGRectMake(35, 0, 50, 25)];
+        self.name = [[UILabel alloc] initWithFrame:CGRectMake(0, 40, frame.size.width, 20)];
+        [self.name setTextAlignment:NSTextAlignmentCenter];
         [self.name setFont:[UIFont systemFontOfSize:14.0]];
         [self.contentView addSubview:self.name];
-        [self.layer setBorderWidth:0.5];
-        [self.layer setBorderColor:RGB(199, 199, 196).CGColor];
-        self.button = [[UIButton alloc] initWithFrame:CGRectMake(0, self.personIcon.frame.origin.y+self.personIcon.frame.size.height, 25, 0)];
+        self.button = [[UIButton alloc] initWithFrame:CGRectMake(0, self.personIcon.frame.origin.y+self.personIcon.frame.size.height, 35, 0)];
         
-        [self.button setBackgroundColor:[UIColor redColor]];
+        [self.button setBackgroundImage:[UIImage imageNamed:@"x"] forState:UIControlStateNormal];
         self.button.alpha=0.0 ;
         [self.contentView addSubview:self.button];
-        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(showDeleteActionView)];
-        //[self addGestureRecognizer:tap];
-        
     }
     return self;
 }
@@ -41,13 +37,13 @@
     if (self.button.alpha==1.0) {
         [UIView animateWithDuration:0.5 animations:^{
             self.button.alpha=0.0 ;
-            self.button.frame=CGRectMake(0, self.personIcon.frame.origin.y+self.personIcon.frame.size.height, 25, 0);
+            self.button.frame=CGRectMake(0, self.personIcon.frame.origin.y+self.personIcon.frame.size.height, 35, 0);
         }];
     }else
     {
         [UIView animateWithDuration:0.5 animations:^{
             self.button.alpha=1.0 ;
-            self.button.frame=CGRectMake(0, 0, 25, 25);
+            self.button.frame=CGRectMake(0, 0, 35, 35);
         }];
     }
 }

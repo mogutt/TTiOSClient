@@ -31,10 +31,9 @@
 #define IM_PDU_HEADER_LEN   12
 #define IM_PDU_VERSION      1
 
-#warning please set SERVER_IP&SERVER_PORT here
-#define SERVER_IP @""
-#define SERVER_PORT 0
-
+#define SERVER_IP @"122.225.68.125"
+#define SERVER_PORT 18008
+#define IMAGE_UPLOAD_IP @"http://122.225.68.125:8600/"
 
 //-------------------本地化--------------------
 //在所有显示在界面上的字符串进行本地化处理

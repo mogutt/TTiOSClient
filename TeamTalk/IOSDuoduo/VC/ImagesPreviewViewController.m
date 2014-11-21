@@ -14,6 +14,7 @@
 #import "ChattingMainViewController.h"
 #import "DDMessageSendManager.h"
 #import "std.h"
+#import <objc/runtime.h>
 #import "MWCommon.h"
 #import "PhotosCache.h"
 #import "MBProgressHUD.h"
@@ -133,8 +134,8 @@
     [toolView setBackgroundColor:RGBA(0, 0, 0, 0.7)];
     self.button = [UIButton buttonWithType:UIButtonTypeCustom];
     [self.button setBackgroundColor:[UIColor clearColor]];
-    [self.button setTitle:[NSString stringWithFormat:@"发送( %d )",[self.photos count]] forState:UIControlStateNormal];
-    [self.button setTitle:[NSString stringWithFormat:@"发送( %d )",[self.photos count]] forState:UIControlStateSelected];
+    [self.button setTitle:[NSString stringWithFormat:@"发送(%d)",[self.photos count]] forState:UIControlStateNormal];
+    [self.button setTitle:[NSString stringWithFormat:@"发送(%d)",[self.photos count]] forState:UIControlStateSelected];
     [self.button setBackgroundImage:[UIImage imageNamed:@"dd_image_send"] forState:UIControlStateNormal];
     [self.button setBackgroundImage:[UIImage imageNamed:@"dd_image_send"] forState:UIControlStateSelected];
     
@@ -173,7 +174,7 @@
 -(void)viewWillAppear:(BOOL)animated
 {
     [super viewWillAppear:animated];
-    
+    [self.tabBarController.tabBar setHidden:YES];
 }
 - (void)didReceiveMemoryWarning
 {
@@ -198,7 +199,8 @@
                 NSData *photoData = UIImagePNGRepresentation(newPhoto.image);
                 [[PhotosCache sharedPhotoCache] storePhoto:photoData forKey:keyName toDisk:YES];
                 photo.localPath=keyName;
-                [[ChattingMainViewController shareInstance] sendImageMessage:photo];
+                photo.image=newPhoto.image;
+                [[ChattingMainViewController shareInstance] sendImageMessage:photo Image:photo.image];
                 
             }
         }

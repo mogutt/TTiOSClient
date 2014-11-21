@@ -38,7 +38,7 @@ typedef NS_ENUM(NSUInteger, MessageType)
  *  @param sessionID  会话ID
  *  @param completion 完成发送消息
  */
-- (void)sendMessage:(NSString*)content isGroup:(BOOL)isGroup forSessionID:(NSString*)sessionID completion:(DDSendMessageCompletion)completion;
+- (void)sendMessage:(DDMessageEntity *)message isGroup:(BOOL)isGroup forSessionID:(NSString*)sessionID completion:(DDSendMessageCompletion)completion;
 
-- (void)sendVoiceMessage:(NSData*)voice filePath:(NSString*)filePath forSessionID:(NSString*)sessionID completion:(DDSendMessageCompletion)completion;
+- (void)sendVoiceMessage:(NSData*)voice filePath:(NSString*)filePath forSessionID:(NSString*)sessionID isGroup:(BOOL)isGroup completion:(DDSendMessageCompletion)completion;
 @end

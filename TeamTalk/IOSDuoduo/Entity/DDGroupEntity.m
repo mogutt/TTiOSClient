@@ -9,15 +9,6 @@
 #import "NSDictionary+Safe.h"
 @implementation DDGroupEntity
 
-//注：由于groupId和userId会存在重复情况，对groupId加个前缀
--(void)setGroupId:(NSString*)gId;
-{
- 
-        _groupId = gId;
-    
-}
-
-
 - (void)setGroupUserIds:(NSMutableArray *)groupUserIds
 {
     if (_groupUserIds)
@@ -80,7 +71,7 @@
 
 +(NSString *)getSessionId:(NSString *)groupId
 {
-    return groupId;
+     return groupId;
 }
 
 - (void)addFixOrderGroupUserIDS:(NSString*)ID
@@ -96,17 +87,19 @@
 {
     DDGroupEntity *group = [DDGroupEntity new];
     group.groupCreatorId=[dic safeObjectForKey:@"creatID"];
-    group.groupId = [dic safeObjectForKey:@"groupId"];
+    group.objID = [dic safeObjectForKey:@"groupId"];
     group.avatar = [dic safeObjectForKey:@"avatar"];
     group.GroupType = [[dic safeObjectForKey:@"groupType"] integerValue];
     group.name = [dic safeObjectForKey:@"name"];
     group.avatar = [dic safeObjectForKey:@"avatar"];
+    group.isShield = [[dic safeObjectForKey:@"isshield"] boolValue];
     NSString *string =[dic safeObjectForKey:@"Users"];
     NSArray *array = [string componentsSeparatedByString:@"-"];
     if ([array count] >0) {
         group.groupUserIds=[array copy];
     }
     group.lastMsg =[dic safeObjectForKey:@"lastMessage"];
+    group.lastUpdateTime=[[dic safeObjectForKey:@"lastUpdateTime"] longValue];
     return group;
 }
 @end

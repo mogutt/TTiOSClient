@@ -16,7 +16,7 @@
  */
 - (int)requestTimeOutTimeInterval
 {
-    return 0;
+    return TimeOutTimeInterval;
 }
 
 /**
@@ -58,7 +58,6 @@
 {
     return CMD_ID_GROUP_USER_LIST_RES;
 }
-
 /**
  *  解析数据的block
  *
@@ -81,7 +80,7 @@
         NSString *groupAvatar = [bodyData readUTF];
         NSString *groupCreator = [bodyData readUTF];
         int groupType = [bodyData readInt];
-        group.groupId = groupId;
+        group.objID = groupId;
         group.name = groupName;
         group.avatar = groupAvatar;
         group.groupCreatorId = groupCreator;
@@ -112,12 +111,13 @@
         DDDataOutputStream *dataout = [[DDDataOutputStream alloc] init];
         uint32_t totalLen = IM_PDU_HEADER_LEN + 4 + strLen(object);
         
-        [dataout writeInt:totalLen];
+        [dataout writeInt:0];
         [dataout writeTcpProtocolHeader:MODULE_ID_GROUP
                                     cId:CMD_ID_GROUP_USER_LIST_REQ
                                   seqNo:seqNo];
         [dataout writeUTF:object];
 //        log4CInfo(@"serviceID:%i cmdID:%i --> get group user list req",MODULE_ID_GROUP,CMD_ID_GROUP_USER_LIST_REQ);
+        [dataout writeDataCount];
         return [dataout toByteArray];
     };
     return package;

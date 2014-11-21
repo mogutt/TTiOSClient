@@ -10,11 +10,11 @@
 #import "DDMessageEntity.h"
 
 typedef void(^GetLastestMessageCompletion)(DDMessageEntity* message);
-
+typedef void(^GetUnreadMessageCount)(NSInteger count);
 @interface DDMessageModule : NSObject
 + (instancetype)shareInstance;
 
-+ (NSUInteger)getMessageID;
++ (NSString *)getMessageID;
 
 /**
  *  获得最新的消息
@@ -22,8 +22,8 @@ typedef void(^GetLastestMessageCompletion)(DDMessageEntity* message);
  *  @param sessionID  会话ID
  *  @param completion 完成获取
  */
-- (void)getLastMessageForSessionID:(NSString*)sessionID completion:(GetLastestMessageCompletion)completion;
-
+- ( void)getLastMessageForSessionID:(NSString*)sessionID block:(GetLastestMessageCompletion)block;
+-(void)removeFromUnreadMessageButNotSendRead:(NSString*)sessionID;
 - (void)addUnreadMessage:(DDMessageEntity*)message;
 - (void)clearUnreadMessagesForSessionID:(NSString*)sessionID;
 - (NSUInteger)getUnreadMessgeCount;

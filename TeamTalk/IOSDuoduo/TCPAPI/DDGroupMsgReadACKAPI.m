@@ -85,6 +85,7 @@
         [dataout writeInt:totalLen];
         [dataout writeTcpProtocolHeader:MODULE_ID_GROUP cId:CMD_ID_GROUP_MSG_READ_ACK seqNo:seqNo];
         [dataout writeUTF:groupId];
+        NSLog(@"i will send");
 //        log4CInfo(@"serviceID:%i cmdID:%i --> group msg read ACK group ID:%@",MODULE_ID_GROUP,CMD_ID_GROUP_MSG_READ_ACK,groupId);
         return [dataout toByteArray];
     };

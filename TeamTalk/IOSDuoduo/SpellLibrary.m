@@ -12,6 +12,7 @@
 @implementation SpellLibrary
 {
     NSMutableDictionary* _spellLibrary;
+    NSMutableDictionary *_spellLibrary_Deparment;
     NSDictionary* _saucerManDic;
     
 }
@@ -31,6 +32,7 @@
     if (self)
     {
         _spellLibrary = [[NSMutableDictionary alloc] init];
+        _spellLibrary_Deparment = [NSMutableDictionary new];
         _saucerManDic = @{@"长卿" : @"chang qing",
                           @"朝夕" : @"zhao xi"};
     }
@@ -41,7 +43,51 @@
 {
     
 }
-
+-(BOOL)isEmpty
+{
+    return ![[_spellLibrary allKeys] count];
+}
+- (void)addDeparmentSpellForObject:(id)sender
+{
+    NSString* word = nil;
+    if ([sender isKindOfClass:[DDUserEntity class]])
+    {
+        word = [(DDUserEntity*)sender department];
+    }
+    else
+    {
+        return;
+    }
+    if (!word)
+    {
+        return;
+    }
+    
+    NSMutableString* spell = _saucerManDic[word];
+    if (!spell)
+    {
+        spell = [NSMutableString stringWithString:word];
+        CFRange range = CFRangeMake(0, spell.length);
+        CFStringTransform((CFMutableStringRef)spell, &range, kCFStringTransformMandarinLatin, NO);
+        CFStringTransform((CFMutableStringRef)spell, &range, kCFStringTransformStripCombiningMarks, NO);
+    }
+    NSString* key = [spell lowercaseString];
+    if (![[_spellLibrary_Deparment allKeys] containsObject:spell])
+    {
+        NSMutableArray* objects = [[NSMutableArray alloc] init];
+        
+        [objects addObject:sender];
+        [_spellLibrary_Deparment setObject:objects forKey:key];
+    }
+    else
+    {
+        NSMutableArray* objects = _spellLibrary_Deparment[key];
+        if (![objects containsObject:sender])
+        {
+            [objects addObject:sender];
+        }
+    }
+}
 - (void)addSpellForObject:(id)sender
 {
     NSString* word = nil;
@@ -67,9 +113,6 @@
     {
         spell = [NSMutableString stringWithString:word];
         CFRange range = CFRangeMake(0, spell.length);
-        
-        
-        
         CFStringTransform((CFMutableStringRef)spell, &range, kCFStringTransformMandarinLatin, NO);
         CFStringTransform((CFMutableStringRef)spell, &range, kCFStringTransformStripCombiningMarks, NO);
     }
@@ -121,7 +164,37 @@
     }];
     return result;
 }
+- (NSMutableArray*)checkoutForWordsForSpell_Deparment:(NSString*)spell
+{
+    NSMutableArray* result = [[NSMutableArray alloc] init];
+    
+    [_spellLibrary_Deparment enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+        //
+        NSString* withoutSpaceSpellKey = [(NSString*)key removeAllSpace];
+        if ([withoutSpaceSpellKey rangeOfString:spell].length > 0)
+        {
+            [result addObjectsFromArray:(NSArray*)obj];
+        }
+        
+        //拼音简写搜索
+        NSArray* spellWords = [(NSString*)key componentsSeparatedByString:@" "];
+        for (int index = 0; index < [spellWords count]; index ++)
+        {
+            NSString* briefSpell = [self briefSpellWordFromSpellArray:spellWords fullWord:index];
+            if ([briefSpell rangeOfString:spell].length > 0)
+            {
+                [(NSArray*)obj enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+                    if (![result containsObject:obj])
+                    {
+                        [result addObject:obj];
+                    }
+                }];
+            }
+        }
+    }];
+    return result;
 
+}
 - (NSString*)getSpellForWord:(NSString*)word
 {
     NSMutableString *spell = [NSMutableString stringWithString:word];

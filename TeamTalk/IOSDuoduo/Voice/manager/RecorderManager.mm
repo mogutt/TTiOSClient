@@ -54,6 +54,7 @@ AudioQueueLevelMeterState *levelMeterStates;
 }
 
 - (void)startRecording {
+    [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord error:nil];
     if ( ! mAQRecorder) {
         
         mAQRecorder = new AQRecorder();

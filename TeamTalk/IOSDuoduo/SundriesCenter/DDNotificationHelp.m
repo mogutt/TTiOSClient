@@ -33,7 +33,7 @@ NSString* const DDNotificationUpdateUnReadMessage = @"Notification_update_Unread
 NSString* const DDNotificationReceiveP2PShakeMessage = @"Notification_receive_P2P_Shake_message";
 NSString* const DDNotificationReceiveP2PInputingMessage = @"Notifictaion_receive_P2P_Inputing_message";
 NSString* const DDNotificationReceiveP2PStopInputingMessage = @"Notification_receive_P2P_StopInputing_message";
-
+NSString* const DDNotificationLoadLocalGroupFinish = @"Notification_local_group";
 
 //---------------------------------------------------------------------------------------------------
 NSString* const DDNotificationRecentContactsUpdate = @"Notification_RecentContactsUpdate";

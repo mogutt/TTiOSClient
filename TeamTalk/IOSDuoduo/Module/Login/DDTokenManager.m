@@ -8,6 +8,7 @@
 
 #import "DDTokenManager.h"
 #import "DDAFClient.h"
+#import "RuntimeStatus.h"
 static NSInteger const refreshTokenTimeInterval = 60 * 30;
 
 @interface DDTokenManager(privateAPI)
@@ -37,8 +38,9 @@ static NSInteger const refreshTokenTimeInterval = 60 * 30;
     //DDHttpModule* module = [DDHttpModule shareInstance];
     NSMutableDictionary* dictParams = [NSMutableDictionary dictionary];
     [dictParams setObject:@"imclient" forKey:@"mac"];
-    //[dictParams setObject:dao forKey:@"dao"];
+    [dictParams setObject:dao forKey:@"dao"];
     [DDAFClient jsonFormPOSTRequest:@"mtalk/iauth" param:dictParams success:^(id result) {
+        TheRuntime.token=[result valueForKey:@"token"];
           [self setToken:[result valueForKey:@"token"]];
     } failure:^(NSError *error) {
         failure(error);
@@ -66,9 +68,10 @@ static NSInteger const refreshTokenTimeInterval = 60 * 30;
 #pragma mark privateAPI
 - (void)p_refreshTokenTimer:(NSTimer *)timer
 {
-    [self refreshTokenWithDao:_dao Success:^(NSString *token) {
+    [self refreshTokenWithDao:TheRuntime.dao Success:^(NSString *token) {
         DDLog(@"刷新Token成功");
     } failure:^(id error) {
+        NSLog(@"------%@",TheRuntime.token);
         DDLog(@"刷新Token失败");
     }];
 }

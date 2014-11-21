@@ -269,7 +269,7 @@ static float const minCellLength = 30;
     }
     [muData appendBytes:ch length:4];
     [muData appendData:data];
-    [[DDMessageSendManager instance] sendVoiceMessage:muData filePath:filePath forSessionID:message.sessionId completion:^(DDMessageEntity *theMessage, NSError *error) {
+    [[DDMessageSendManager instance] sendVoiceMessage:muData filePath:filePath forSessionID:message.sessionId isGroup:[message isGroupMessage] completion:^(DDMessageEntity *theMessage, NSError *error) {
         if (!error)
         {
             DDLog(@"发送语音消息成功");
